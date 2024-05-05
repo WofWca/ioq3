@@ -16,6 +16,8 @@ const basegame = urlParams.get('basegame') || 'baseq3';
 let generatedArguments = `
     +set net_enabled 0
     +set r_mode -2
+    +set cg_fovGunAdjust 1
+    +set cg_fovAspectAdjust 1
     +set fs_game ${basegame}
 `;
 // Note that unfortunately "+" needs to be encoded as "%2b" in URL query strings or it will be stripped by the browser.
