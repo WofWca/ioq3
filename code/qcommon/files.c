@@ -3675,7 +3675,7 @@ static void FS_CheckPak0( void )
 	else
 		installPath = fs_basepath->string;
 
-	if(!com_standalone->integer && (foundPak & ((1<<NUM_ID_PAKS)-1)) != ((1<<NUM_ID_PAKS)-1))
+	if(!com_standalone->integer && !founddemo && (foundPak & ((1<<NUM_ID_PAKS)-1)) != ((1<<NUM_ID_PAKS)-1))
 	{
 		char errorText[MAX_STRING_CHARS] = "";
 
