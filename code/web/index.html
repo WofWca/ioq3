@@ -29,7 +29,7 @@ let generatedArguments = `
     +addbot major 2
 `;
 
-import('./ioquake3_opengl2.js').then((ioquake3)=>{
+import('./ioquake3_opengl2.wasm32.js').then((ioquake3)=>{
     ioquake3.default({
         canvas: canvas,
         arguments: generatedArguments.trim().split(/\s+/),
