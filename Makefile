@@ -1082,7 +1082,7 @@ ifeq ($(PLATFORM),emscripten)
   # DataChannel is the only way to use UDP in the browser.
   BUILD_SERVER=0
 
-  CLIENT_EXTRA_FILES+=code/web/ioquake3.html
+  CLIENT_EXTRA_FILES+=code/web/index.html
 
   CLIENT_CFLAGS+=-s USE_SDL=2
 
