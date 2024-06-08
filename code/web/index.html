@@ -14,8 +14,6 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
 <script type=module>
 
 let { promise: demoq3pak0Promise, resolve: gotDemoq3pak0 } = Promise.withResolvers();
-let { promise: demoq3pak1Promise, resolve: gotDemoq3pak1 } = Promise.withResolvers();
-let { promise: demoq3ztm_flexible_hud_r8_baseq3Promise, resolve: gotDemoq3ztm_flexible_hud_r8_baseq3 } = Promise.withResolvers();
 
 let generatedArguments = `
     +set fs_game demoq3
@@ -25,33 +23,27 @@ let generatedArguments = `
     +set cg_fovAspectAdjust 1
     +map q3dm17
     +addbot daemia 2
-    +addbotvisor 2
+    +addbot visor 2
     +addbot sarge 2
     +addbot stripe 2
     +addbot major 2
 `;
 
-import('./ioquake3.wasm32.js').then((ioquake3)=>{
+import('./ioquake3_opengl2.js').then((ioquake3)=>{
     ioquake3.default({
         canvas: canvas,
         arguments: generatedArguments.trim().split(/\s+/),
         preRun: [async (module) => {
             // Add the fetched asset files to the Emscripten virtual filesystem.
             module.addRunDependency('setup-ioq3-filesystem');
-            module.FS.mkdirTree('/home/web_user/.q3a/demoq3');
-            module.FS.writeFile('/home/web_user/.q3a/demoq3/pak0.pk3', await demoq3pak0Promise);
-            module.FS.writeFile('/home/web_user/.q3a/demoq3/pak1.pk3', await demoq3pak1Promise);
-            module.FS.writeFile('/home/web_user/.q3a/demoq3/ztm-flexible-hud-r8-baseq3.pk3', await demoq3ztm_flexible_hud_r8_baseq3Promise);
+            module.FS.mkdirTree('/demoq3');
+            module.FS.writeFile('/demoq3/pak0.pk3', await demoq3pak0Promise);
             progress.style.display = 'none';
             module.removeRunDependency('setup-ioq3-filesystem');
         }],
     });
 });
 
-// pak1.pk3 is GPL, built from ioquake sources.
-// ztm-flexible-hud-r8-baseq3.pk3 is a mod, obtained from https://clover.moe/flexible-hud-for-ioq3/
-fetch('pak1.pk3').then(async r => gotDemoq3pak1(new Uint8Array(await r.arrayBuffer())));
-fetch('ztm-flexible-hud-r8-baseq3.pk3').then(async r => gotDemoq3ztm_flexible_hud_r8_baseq3(new Uint8Array(await r.arrayBuffer())));
 // demoq3/pak0.pk3 is original Quake 3 demo assets. Fetch them from a tarfile in a gz file in a shell script in a zip file at the Internet Archive.
 // First check to see if we have it in the cache
 const cache = await caches.open('thelongestyard');
