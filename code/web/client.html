@@ -16,23 +16,27 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
 let { promise: demoq3pak0Promise, resolve: gotDemoq3pak0 } = Promise.withResolvers();
 
 let generatedArguments = `
-    +set fs_game demoq3
     +set r_mode -2
     +set cg_fovGunAdjust 1
     +set cg_fovAspectAdjust 1
-    +set com_maxfps 0
+    +set net_enabled 24
+    +set net_peer_server "ws://localhost:8080/ws"
 `;
+// +set com_maxfps 0
+// +set fs_game demoq3
     // +map q3dm17
     // +addbot daemia 2
     // +addbot visor 2
     // +addbot sarge 2
     // +addbot stripe 2
     // +addbot major 2
+    const buildPath = '../../build/debug-emscripten-wasm32';
 
-import('./ioquake3_opengl2.wasm32.js').then((ioquake3)=>{
+import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then((ioquake3)=>{
     ioquake3.default({
         canvas: canvas,
         arguments: generatedArguments.trim().split(/\s+/),
+        locateFile: (file) => `${buildPath}/${file}`,
         preRun: [async (module) => {
             // Add the fetched asset files to the Emscripten virtual filesystem.
             module.addRunDependency('setup-ioq3-filesystem');

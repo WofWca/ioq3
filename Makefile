@@ -244,6 +244,10 @@ ifndef USE_RENDERER_DLOPEN
 USE_RENDERER_DLOPEN=1
 endif
 
+ifndef USE_HUMBLENET
+USE_HUMBLENET=0
+endif
+
 ifndef USE_YACC
 USE_YACC=0
 endif
@@ -282,6 +286,7 @@ OPUSDIR=$(MOUNT_DIR)/opus-1.2.1
 OPUSFILEDIR=$(MOUNT_DIR)/opusfile-0.9
 ZDIR=$(MOUNT_DIR)/zlib
 TOOLSDIR=$(MOUNT_DIR)/tools
+HDIR=$(MOUNT_DIR)/humblenet
 Q3ASMDIR=$(MOUNT_DIR)/tools/asm
 LBURGDIR=$(MOUNT_DIR)/tools/lcc/lburg
 Q3CPPDIR=$(MOUNT_DIR)/tools/lcc/cpp
@@ -637,6 +642,13 @@ ifeq ($(PLATFORM),darwin)
   SHLIBLDFLAGS=-dynamiclib $(LDFLAGS) -Wl,-U,_com_altivec
 
   NOTSHLIBCFLAGS=-mdynamic-no-pic
+
+  ifeq ($(USE_HUMBLENET),1)
+    LIBS += $(LIBSDIR)/macosx/libhumblenet.dylib
+    EXTRA_FILES += $(LIBSDIR)/macosx/libhumblenet.dylib
+    BASE_CFLAGS += -DUSE_HUMBLENET
+    LDFLAGS += -rpath @executable_path/
+  endif
 
 else # ifeq darwin
 
@@ -1077,12 +1089,15 @@ ifeq ($(PLATFORM),emscripten)
   HAVE_VM_COMPILED=false
   BUILD_GAME_SO=0
   BUILD_GAME_QVM=0
-  # Would be interesting to try to get the server working via WebRTC DataChannel.
-  # This would enable P2P play, hosting a server in the browser. Also,
-  # DataChannel is the only way to use UDP in the browser.
-  BUILD_SERVER=0
+
+  USE_HUMBLENET=1
+  BUILD_SERVER=1
 
   CLIENT_EXTRA_FILES+=code/web/index.html
+
+  ifeq ($(BUILD_SERVER),1)
+    CLIENT_EXTRA_FILES+=code/web/server-worker.js code/web/server.html
+  endif
 
   CLIENT_CFLAGS+=-s USE_SDL=2
 
@@ -1093,10 +1108,21 @@ ifeq ($(PLATFORM),emscripten)
   CLIENT_LDFLAGS+=-s MAX_WEBGL_VERSION=2
   CLIENT_LDFLAGS+=-s FULL_ES2=1
   # The HTML file can use these functions to load extra files before the game starts.
-  CLIENT_LDFLAGS+=-s EXPORTED_RUNTIME_METHODS=FS,addRunDependency,removeRunDependency
+  CLIENT_LDFLAGS+=-s EXPORTED_RUNTIME_METHODS=FS,addRunDependency,removeRunDependency,cwrap,stackAlloc,out
+  # CLIENT_LDFLAGS+=-s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE='["$$stackAlloc"]'
   CLIENT_LDFLAGS+=-s EXIT_RUNTIME=1
   CLIENT_LDFLAGS+=-s EXPORT_ES6
   CLIENT_LDFLAGS+=-s EXPORT_NAME=ioquake3
+
+  SERVER_LDFLAGS+=-s TOTAL_MEMORY=256mb
+  SERVER_LDFLAGS+=-s STACK_SIZE=5MB
+  SERVER_LDFLAGS+=-s EXPORTED_RUNTIME_METHODS=FS,addRunDependency,removeRunDependency,cwrap,stackAlloc,out
+  # SERVER_LDFLAGS+=-s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE='["$$stackAlloc"]'
+  SERVER_LDFLAGS+=-s EXIT_RUNTIME=1
+  SERVER_LDFLAGS+=-s EXPORT_ES6
+  SERVER_LDFLAGS+=-s EXPORT_NAME=ioq3ded
+
+
   # Game data files can be packaged by emcc into a .data file that lives next to the wasm bundle
   # and added to the virtual filesystem before the game starts. This requires the game data to be
   # present at build time and it can't be changed afterward.
@@ -1105,6 +1131,7 @@ ifeq ($(PLATFORM),emscripten)
   # changed later.
   ifneq ($(wildcard $(BASEGAME)/*),)
     CLIENT_LDFLAGS+=--preload-file $(BASEGAME)
+    SERVER_LDFLAGS+=--preload-file $(BASEGAME)
     EMSCRIPTEN_PRELOAD_FILE=1
     CLIENT_EXTRA_FILES+=code/web/empty/ioq3-config.json
   else
@@ -1174,10 +1201,10 @@ ifneq ($(BUILD_SERVER),0)
   TARGETS += $(B)/$(SERVERBIN)$(FULLBINEXT)
 
   ifeq ($(PLATFORM),emscripten)
-    EMSCRIPTENOBJ+=$(B)/$(SERVERBIN).wasm
-    ifeq ($(EMSCRIPTEN_PRELOAD_FILE),1)
-      EMSCRIPTENOBJ+=$(B)/$(SERVERBIN).data
-    endif
+    EMSCRIPTENOBJ+=$(B)/$(SERVERBIN).wasm32.wasm
+    # ifeq ($(EMSCRIPTEN_PRELOAD_FILE),1)
+    #   EMSCRIPTENOBJ+=$(B)/$(SERVERBIN).wasm32.data
+    # endif
   endif
 endif
 
@@ -1243,6 +1270,10 @@ ifneq ($(BUILD_AUTOUPDATER),0)
   #  So don't call this thing "autoupdater" here!
   AUTOUPDATER_BIN := autosyncerator$(FULLBINEXT)
   TARGETS += $(B)/$(AUTOUPDATER_BIN)
+endif
+
+ifeq ($(USE_HUMBLENET),1)
+  BASE_CFLAGS += -DUSE_HUMBLENET
 endif
 
 ifeq ($(USE_OPENAL),1)
@@ -2408,6 +2439,13 @@ ifeq ($(PLATFORM),darwin)
     $(B)/client/sys_osx.o
 endif
 
+ifeq ($(PLATFORM),emscripten)
+ifeq ($(USE_HUMBLENET),1)
+  Q3OBJ += \
+    $(B)/client/humblenet_asmjs_amalgam.o
+endif
+endif
+
 ifeq ($(USE_MUMBLE),1)
   Q3OBJ += \
     $(B)/client/libmumblelink.o
@@ -2577,8 +2615,14 @@ ifdef MINGW
     $(B)/ded/con_win32.o
 else
   Q3DOBJ += \
-    $(B)/ded/sys_unix.o \
-    $(B)/ded/con_tty.o
+    $(B)/ded/sys_unix.o
+  ifeq ($(PLATFORM),emscripten)
+    Q3DOBJ += \
+      $(B)/ded/con_passive.o
+  else
+    Q3DOBJ += \
+      $(B)/ded/con_tty.o
+  endif
 endif
 
 ifeq ($(PLATFORM),darwin)
@@ -2586,9 +2630,16 @@ ifeq ($(PLATFORM),darwin)
     $(B)/ded/sys_osx.o
 endif
 
+ifeq ($(PLATFORM),emscripten)
+ifeq ($(USE_HUMBLENET),1)
+  Q3DOBJ += \
+    $(B)/ded/humblenet_asmjs_amalgam.o
+endif
+endif
+
 $(B)/$(SERVERBIN)$(FULLBINEXT): $(Q3DOBJ)
 	$(echo_cmd) "LD $@"
-	$(Q)$(CC) $(CFLAGS) $(LDFLAGS) $(NOTSHLIBLDFLAGS) -o $@ $(Q3DOBJ) $(LIBS)
+	$(Q)$(CC) $(CFLAGS) $(LDFLAGS) $(NOTSHLIBLDFLAGS) $(SERVER_LDFLAGS) -o $@ $(Q3DOBJ) $(LIBS)
 
 
 
@@ -2897,6 +2948,9 @@ $(B)/client/%.o: $(CDIR)/%.c
 $(B)/client/%.o: $(SDIR)/%.c
 	$(DO_CC)
 
+$(B)/client/%.o: $(HDIR)/%.cpp
+	$(DO_CC)
+
 $(B)/client/%.o: $(CMDIR)/%.c
 	$(DO_CC)
 
@@ -2979,6 +3033,9 @@ $(B)/ded/%.o: $(ASMDIR)/%.c
 	$(DO_CC) -march=k8
 
 $(B)/ded/%.o: $(SDIR)/%.c
+	$(DO_DED_CC)
+
+$(B)/ded/%.o: $(HDIR)/%.cpp
 	$(DO_DED_CC)
 
 $(B)/ded/%.o: $(CMDIR)/%.c

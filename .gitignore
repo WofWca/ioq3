@@ -6,6 +6,7 @@ Makefile.local
 /.vscode/
 /baseq3
 /demoq3
+/.cache/
 
 # OS X
 ####################
