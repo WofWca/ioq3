@@ -17,13 +17,14 @@ let { promise: demoq3pak0Promise, resolve: gotDemoq3pak0 } = Promise.withResolve
 
 let generatedArguments = `
     +set r_mode -2
+    +set fs_game demoq3
     +set cg_fovGunAdjust 1
     +set cg_fovAspectAdjust 1
+    +set com_maxfps 0
     +set net_enabled 24
     +set net_peer_server "ws://localhost:8080/ws"
+    +connect peer_2.humblenet
 `;
-// +set com_maxfps 0
-// +set fs_game demoq3
     // +map q3dm17
     // +addbot daemia 2
     // +addbot visor 2
