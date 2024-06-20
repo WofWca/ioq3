@@ -4733,7 +4733,7 @@ int on_data( internal_socket_t* s, const void* data, int len, void* user_data ) 
 
 	assert( conn->status == HUMBLENET_CONNECTION_CONNECTED );
 
-	LOG("Received %d from peer %u\n", len, conn->otherPeer);
+	// LOG("Received %d from peer %u\n", len, conn->otherPeer);
 
 	if( conn->recvBuffer.empty() ) {
 		assert( humbleNetState.pendingDataConnections.find(conn) == humbleNetState.pendingDataConnections.end() );
@@ -7676,7 +7676,7 @@ struct libwebrtc_context* libwebrtc_create_context( lwrtc_callback_function call
 			return connection;
 		};
 		libwebrtc.create_channel = function(connection, name) {
-			var channel = connection.createDataChannel( name );
+			var channel = connection.createDataChannel( name, {ordered: false, maxRetransmits: 0} );
 			channel.parent = connection;
 			// use the parents data initially
 			channel.user_data = connection.user_data;
