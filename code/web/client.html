@@ -13,6 +13,50 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
 
 <script type=module>
 
+const defaultKeyBindingKeyCodes = {
+    "KeyW": true,
+    "KeyA": true,
+    "KeyS": true,
+    "KeyD": true,
+    "KeyC": true,
+    "KeyT": true,
+    "Digit1": true,
+    "Digit2": true,
+    "Digit3": true,
+    "Digit4": true,
+    "Digit5": true,
+    "Digit6": true,
+    "Digit7": true,
+    "Digit8": true,
+    "Digit9": true,
+    "Tab": true,
+    "Space": true,
+    "Enter": true,
+    "NumpadEnter": true,
+    "Delete": true,
+    "Slash": true,
+    "Backslash": true,
+    "ArrowUp": true,
+    "ArrowDown": true,
+    "ArrowLeft": true,
+    "ArrowRight": true,
+    "PageDown": true,
+    "End": true,
+    "Escape": true,
+    "ControlLeft": true,
+    "ControlRight": true,
+    "ShiftLeft": true,
+    "ShiftRight": true,
+    "AltLeft": true,
+    "AltRight": true
+};
+window.addEventListener("keydown", (e) => {
+        // Emscripten SDL2 will preventDefault all keyboard events which prevents browser keyboard shortcuts from working.
+        // This was supposed to be fixed in https://github.com/emscripten-core/emscripten/issues/16462 however the fix regressed.
+        // This hack lets the browser handle everything, except for the default Quake III keybindings.
+        if (!defaultKeyBindingKeyCodes[e.code]) e.preventDefault = () => false;
+    }, { capture: true });
+
 let { promise: demoq3pak0Promise, resolve: gotDemoq3pak0 } = Promise.withResolvers();
 
 let generatedArguments = `
