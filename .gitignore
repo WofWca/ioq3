@@ -6,7 +6,9 @@ Makefile.local
 /.vscode/
 /baseq3
 /demoq3
+/missionpack
 /.cache/
+/compile_commands.json
 
 # OS X
 ####################
