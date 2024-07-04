@@ -314,11 +314,11 @@ void GL_CheckErrs( char *file, int line ) {
 	int		err;
 	char	s[64];
 
-	err = qglGetError();
-	if ( err == GL_NO_ERROR ) {
+	if ( r_ignoreGLErrors->integer ) {
 		return;
 	}
-	if ( r_ignoreGLErrors->integer ) {
+	err = qglGetError();
+	if ( err == GL_NO_ERROR ) {
 		return;
 	}
 	switch( err ) {
@@ -1477,10 +1477,29 @@ void R_Init( void ) {
 
 	ri.Printf( PRINT_ALL, "----- R_Init -----\n" );
 
+	trGlobals_t temp = tr;
 	// clear all our internal state
 	Com_Memset( &tr, 0, sizeof( tr ) );
 	Com_Memset( &backEnd, 0, sizeof( backEnd ) );
 	Com_Memset( &tess, 0, sizeof( tess ) );
+	// restore shaders so we don't have to recompile them all.
+	// this means some rendering cvars won't take effect until restart. oh well. halving load time in firefox is worth it
+	Com_Memcpy(tr.genericShader, temp.genericShader, sizeof(tr.genericShader));
+	Com_Memcpy(tr.fogShader, temp.fogShader, sizeof(tr.fogShader));
+	Com_Memcpy(tr.dlightShader, temp.dlightShader, sizeof(tr.dlightShader));
+	Com_Memcpy(tr.lightallShader, temp.lightallShader, sizeof(tr.lightallShader));
+	Com_Memcpy(tr.shadowmapShader, temp.shadowmapShader, sizeof(tr.shadowmapShader));
+	Com_Memcpy(tr.calclevels4xShader, temp.calclevels4xShader, sizeof(tr.calclevels4xShader));
+	Com_Memcpy(tr.depthBlurShader, temp.depthBlurShader, sizeof(tr.depthBlurShader));
+	tr.textureColorShader = temp.textureColorShader;
+	tr.pshadowShader = temp.pshadowShader;
+	tr.down4xShader = temp.down4xShader;
+	tr.bokehShader = temp.bokehShader;
+	tr.tonemapShader = temp.tonemapShader;
+	tr.shadowmaskShader = temp.shadowmaskShader;
+	tr.ssaoShader = temp.ssaoShader;
+	tr.testcubeShader = temp.testcubeShader;
+
 
 	if(sizeof(glconfig_t) != 11332)
 		ri.Error( ERR_FATAL, "Mod ABI incompatible: sizeof(glconfig_t) == %u != 11332", (unsigned int) sizeof(glconfig_t));

@@ -539,6 +539,7 @@ static void GLSL_ShowProgramUniforms(GLuint program)
 
 static int GLSL_InitGPUShader2(shaderProgram_t * program, const char *name, int attribs, const char *vpCode, const char *fpCode)
 {
+	ri.Printf(PRINT_ALL, "GLSL_InitGPUShader2: %s\n", name);
 	ri.Printf(PRINT_DEVELOPER, "------- GPU shader -------\n");
 
 	if(strlen(name) >= MAX_QPATH)
@@ -622,6 +623,7 @@ static int GLSL_InitGPUShader(shaderProgram_t * program, const char *name,
 	int attribs, qboolean fragmentShader, const GLchar *extra, qboolean addHeader,
 	const char *fallback_vp, const char *fallback_fp)
 {
+	if (program->program) return 1; // already initialized
 	char vpCode[32000];
 	char fpCode[32000];
 	char *postHeader;
@@ -979,6 +981,10 @@ void GLSL_InitGPUShaders(void)
 
 	for (i = 0; i < GENERICDEF_COUNT; i++)
 	{	
+		// HACK: these aren't used in original q3. skip to reduce compile time
+		if (i & GENERICDEF_USE_BONE_ANIMATION)
+			continue;
+
 		if ((i & GENERICDEF_USE_VERTEX_ANIMATION) && (i & GENERICDEF_USE_BONE_ANIMATION))
 			continue;
 
@@ -1115,6 +1121,15 @@ void GLSL_InitGPUShaders(void)
 
 	for (i = 0; i < LIGHTDEF_COUNT; i++)
 	{
+		// HACK: these aren't used in original q3. skip to reduce compile time
+		if (i & LIGHTDEF_ENTITY_BONE_ANIMATION)
+			continue;
+		if (i & LIGHTDEF_USE_PARALLAXMAP)
+			continue;
+		if (i & LIGHTDEF_USE_SHADOWMAP)
+			continue;
+
+
 		int lightType = i & LIGHTDEF_LIGHTTYPE_MASK;
 		qboolean fastLight = !(r_normalMapping->integer || r_specularMapping->integer);
 
@@ -1276,241 +1291,241 @@ void GLSL_InitGPUShaders(void)
 		numLightShaders++;
 	}
 
-	for (i = 0; i < SHADOWMAPDEF_COUNT; i++)
-	{
-		if ((i & SHADOWMAPDEF_USE_VERTEX_ANIMATION) && (i & SHADOWMAPDEF_USE_BONE_ANIMATION))
-			continue;
+	// for (i = 0; i < SHADOWMAPDEF_COUNT; i++)
+	// {
+	// 	if ((i & SHADOWMAPDEF_USE_VERTEX_ANIMATION) && (i & SHADOWMAPDEF_USE_BONE_ANIMATION))
+	// 		continue;
 
-		if ((i & SHADOWMAPDEF_USE_VERTEX_ANIMATION) && !glRefConfig.gpuVertexAnimation)
-			continue;
+	// 	if ((i & SHADOWMAPDEF_USE_VERTEX_ANIMATION) && !glRefConfig.gpuVertexAnimation)
+	// 		continue;
 
-		if ((i & SHADOWMAPDEF_USE_BONE_ANIMATION) && !glRefConfig.glslMaxAnimatedBones)
-			continue;
+	// 	if ((i & SHADOWMAPDEF_USE_BONE_ANIMATION) && !glRefConfig.glslMaxAnimatedBones)
+	// 		continue;
 
-		attribs = ATTR_POSITION | ATTR_NORMAL | ATTR_TEXCOORD;
+	// 	attribs = ATTR_POSITION | ATTR_NORMAL | ATTR_TEXCOORD;
 
-		extradefines[0] = '\0';
+	// 	extradefines[0] = '\0';
 
-		if (i & SHADOWMAPDEF_USE_VERTEX_ANIMATION)
-		{
-			Q_strcat(extradefines, 1024, "#define USE_VERTEX_ANIMATION\n");
-			attribs |= ATTR_POSITION2 | ATTR_NORMAL2;
-		}
+	// 	if (i & SHADOWMAPDEF_USE_VERTEX_ANIMATION)
+	// 	{
+	// 		Q_strcat(extradefines, 1024, "#define USE_VERTEX_ANIMATION\n");
+	// 		attribs |= ATTR_POSITION2 | ATTR_NORMAL2;
+	// 	}
 
-		if (i & SHADOWMAPDEF_USE_BONE_ANIMATION)
-		{
-			Q_strcat(extradefines, 1024, va("#define USE_BONE_ANIMATION\n#define MAX_GLSL_BONES %d\n", glRefConfig.glslMaxAnimatedBones));
-			attribs |= ATTR_BONE_INDEXES | ATTR_BONE_WEIGHTS;
-		}
+	// 	if (i & SHADOWMAPDEF_USE_BONE_ANIMATION)
+	// 	{
+	// 		Q_strcat(extradefines, 1024, va("#define USE_BONE_ANIMATION\n#define MAX_GLSL_BONES %d\n", glRefConfig.glslMaxAnimatedBones));
+	// 		attribs |= ATTR_BONE_INDEXES | ATTR_BONE_WEIGHTS;
+	// 	}
 
-		if (!GLSL_InitGPUShader(&tr.shadowmapShader[i], "shadowfill", attribs, qtrue, extradefines, qtrue, fallbackShader_shadowfill_vp, fallbackShader_shadowfill_fp))
-		{
-			ri.Error(ERR_FATAL, "Could not load shadowfill shader!");
-		}
+	// 	if (!GLSL_InitGPUShader(&tr.shadowmapShader[i], "shadowfill", attribs, qtrue, extradefines, qtrue, fallbackShader_shadowfill_vp, fallbackShader_shadowfill_fp))
+	// 	{
+	// 		ri.Error(ERR_FATAL, "Could not load shadowfill shader!");
+	// 	}
 
-		GLSL_InitUniforms(&tr.shadowmapShader[i]);
-		GLSL_FinishGPUShader(&tr.shadowmapShader[i]);
+	// 	GLSL_InitUniforms(&tr.shadowmapShader[i]);
+	// 	GLSL_FinishGPUShader(&tr.shadowmapShader[i]);
 
-		numEtcShaders++;
-	}
+	// 	numEtcShaders++;
+	// }
 
-	attribs = ATTR_POSITION | ATTR_NORMAL;
-	extradefines[0] = '\0';
+	// attribs = ATTR_POSITION | ATTR_NORMAL;
+	// extradefines[0] = '\0';
 
-	Q_strcat(extradefines, 1024, "#define USE_PCF\n#define USE_DISCARD\n");
+	// Q_strcat(extradefines, 1024, "#define USE_PCF\n#define USE_DISCARD\n");
 
-	if (!GLSL_InitGPUShader(&tr.pshadowShader, "pshadow", attribs, qtrue, extradefines, qtrue, fallbackShader_pshadow_vp, fallbackShader_pshadow_fp))
-	{
-		ri.Error(ERR_FATAL, "Could not load pshadow shader!");
-	}
+	// if (!GLSL_InitGPUShader(&tr.pshadowShader, "pshadow", attribs, qtrue, extradefines, qtrue, fallbackShader_pshadow_vp, fallbackShader_pshadow_fp))
+	// {
+	// 	ri.Error(ERR_FATAL, "Could not load pshadow shader!");
+	// }
 	
-	GLSL_InitUniforms(&tr.pshadowShader);
+	// GLSL_InitUniforms(&tr.pshadowShader);
 
-	GLSL_SetUniformInt(&tr.pshadowShader, UNIFORM_SHADOWMAP, TB_DIFFUSEMAP);
+	// GLSL_SetUniformInt(&tr.pshadowShader, UNIFORM_SHADOWMAP, TB_DIFFUSEMAP);
 
-	GLSL_FinishGPUShader(&tr.pshadowShader);
+	// GLSL_FinishGPUShader(&tr.pshadowShader);
 
-	numEtcShaders++;
+	// numEtcShaders++;
 
 
-	attribs = ATTR_POSITION | ATTR_TEXCOORD;
-	extradefines[0] = '\0';
+	// attribs = ATTR_POSITION | ATTR_TEXCOORD;
+	// extradefines[0] = '\0';
 
-	if (!GLSL_InitGPUShader(&tr.down4xShader, "down4x", attribs, qtrue, extradefines, qtrue, fallbackShader_down4x_vp, fallbackShader_down4x_fp))
-	{
-		ri.Error(ERR_FATAL, "Could not load down4x shader!");
-	}
+	// if (!GLSL_InitGPUShader(&tr.down4xShader, "down4x", attribs, qtrue, extradefines, qtrue, fallbackShader_down4x_vp, fallbackShader_down4x_fp))
+	// {
+	// 	ri.Error(ERR_FATAL, "Could not load down4x shader!");
+	// }
 	
-	GLSL_InitUniforms(&tr.down4xShader);
+	// GLSL_InitUniforms(&tr.down4xShader);
 
-	GLSL_SetUniformInt(&tr.down4xShader, UNIFORM_TEXTUREMAP, TB_DIFFUSEMAP);
+	// GLSL_SetUniformInt(&tr.down4xShader, UNIFORM_TEXTUREMAP, TB_DIFFUSEMAP);
 
-	GLSL_FinishGPUShader(&tr.down4xShader);
+	// GLSL_FinishGPUShader(&tr.down4xShader);
 
-	numEtcShaders++;
-
-
-	attribs = ATTR_POSITION | ATTR_TEXCOORD;
-	extradefines[0] = '\0';
-
-	if (!GLSL_InitGPUShader(&tr.bokehShader, "bokeh", attribs, qtrue, extradefines, qtrue, fallbackShader_bokeh_vp, fallbackShader_bokeh_fp))
-	{
-		ri.Error(ERR_FATAL, "Could not load bokeh shader!");
-	}
-
-	GLSL_InitUniforms(&tr.bokehShader);
-
-	GLSL_SetUniformInt(&tr.bokehShader, UNIFORM_TEXTUREMAP, TB_DIFFUSEMAP);
-
-	GLSL_FinishGPUShader(&tr.bokehShader);
-
-	numEtcShaders++;
+	// numEtcShaders++;
 
 
-	attribs = ATTR_POSITION | ATTR_TEXCOORD;
-	extradefines[0] = '\0';
+	// attribs = ATTR_POSITION | ATTR_TEXCOORD;
+	// extradefines[0] = '\0';
 
-	if (!GLSL_InitGPUShader(&tr.tonemapShader, "tonemap", attribs, qtrue, extradefines, qtrue, fallbackShader_tonemap_vp, fallbackShader_tonemap_fp))
-	{
-		ri.Error(ERR_FATAL, "Could not load tonemap shader!");
-	}
+	// if (!GLSL_InitGPUShader(&tr.bokehShader, "bokeh", attribs, qtrue, extradefines, qtrue, fallbackShader_bokeh_vp, fallbackShader_bokeh_fp))
+	// {
+	// 	ri.Error(ERR_FATAL, "Could not load bokeh shader!");
+	// }
 
-	GLSL_InitUniforms(&tr.tonemapShader);
+	// GLSL_InitUniforms(&tr.bokehShader);
 
-	GLSL_SetUniformInt(&tr.tonemapShader, UNIFORM_TEXTUREMAP, TB_COLORMAP);
-	GLSL_SetUniformInt(&tr.tonemapShader, UNIFORM_LEVELSMAP,  TB_LEVELSMAP);
+	// GLSL_SetUniformInt(&tr.bokehShader, UNIFORM_TEXTUREMAP, TB_DIFFUSEMAP);
 
-	GLSL_FinishGPUShader(&tr.tonemapShader);
+	// GLSL_FinishGPUShader(&tr.bokehShader);
 
-	numEtcShaders++;
-
-
-	for (i = 0; i < 2; i++)
-	{
-		attribs = ATTR_POSITION | ATTR_TEXCOORD;
-		extradefines[0] = '\0';
-
-		if (!i)
-			Q_strcat(extradefines, 1024, "#define FIRST_PASS\n");
-
-		if (!GLSL_InitGPUShader(&tr.calclevels4xShader[i], "calclevels4x", attribs, qtrue, extradefines, qtrue, fallbackShader_calclevels4x_vp, fallbackShader_calclevels4x_fp))
-		{
-			ri.Error(ERR_FATAL, "Could not load calclevels4x shader!");
-		}
-
-		GLSL_InitUniforms(&tr.calclevels4xShader[i]);
-
-		GLSL_SetUniformInt(&tr.calclevels4xShader[i], UNIFORM_TEXTUREMAP, TB_DIFFUSEMAP);
-
-		GLSL_FinishGPUShader(&tr.calclevels4xShader[i]);
-
-		numEtcShaders++;		
-	}
+	// numEtcShaders++;
 
 
-	// GLSL 1.10+ or GL_EXT_shadow_samplers extension are required for sampler2DShadow type
-	if (glRefConfig.glslMajorVersion > 1 || (glRefConfig.glslMajorVersion == 1 && glRefConfig.glslMinorVersion >= 10)
-	    || glRefConfig.shadowSamplers)
-	{
-		attribs = ATTR_POSITION | ATTR_TEXCOORD;
-		extradefines[0] = '\0';
+	// attribs = ATTR_POSITION | ATTR_TEXCOORD;
+	// extradefines[0] = '\0';
 
-		if (qglesMajorVersion < 3 && glRefConfig.shadowSamplers)
-		{
-			Q_strcat(extradefines, 1024, "#extension GL_EXT_shadow_samplers : enable\n");
-		}
+	// if (!GLSL_InitGPUShader(&tr.tonemapShader, "tonemap", attribs, qtrue, extradefines, qtrue, fallbackShader_tonemap_vp, fallbackShader_tonemap_fp))
+	// {
+	// 	ri.Error(ERR_FATAL, "Could not load tonemap shader!");
+	// }
 
-		if (r_shadowFilter->integer >= 1)
-			Q_strcat(extradefines, 1024, "#define USE_SHADOW_FILTER\n");
+	// GLSL_InitUniforms(&tr.tonemapShader);
 
-		if (r_shadowFilter->integer >= 2)
-			Q_strcat(extradefines, 1024, "#define USE_SHADOW_FILTER2\n");
+	// GLSL_SetUniformInt(&tr.tonemapShader, UNIFORM_TEXTUREMAP, TB_COLORMAP);
+	// GLSL_SetUniformInt(&tr.tonemapShader, UNIFORM_LEVELSMAP,  TB_LEVELSMAP);
 
-		if (r_shadowCascadeZFar->integer != 0)
-			Q_strcat(extradefines, 1024, "#define USE_SHADOW_CASCADE\n");
+	// GLSL_FinishGPUShader(&tr.tonemapShader);
 
-		Q_strcat(extradefines, 1024, va("#define r_shadowMapSize %f\n", r_shadowMapSize->value));
-		Q_strcat(extradefines, 1024, va("#define r_shadowCascadeZFar %f\n", r_shadowCascadeZFar->value));
+	// numEtcShaders++;
 
-		if (!GLSL_InitGPUShader(&tr.shadowmaskShader, "shadowmask", attribs, qtrue, extradefines, qtrue, fallbackShader_shadowmask_vp, fallbackShader_shadowmask_fp))
-		{
-			ri.Error(ERR_FATAL, "Could not load shadowmask shader!");
-		}
+
+	// for (i = 0; i < 2; i++)
+	// {
+	// 	attribs = ATTR_POSITION | ATTR_TEXCOORD;
+	// 	extradefines[0] = '\0';
+
+	// 	if (!i)
+	// 		Q_strcat(extradefines, 1024, "#define FIRST_PASS\n");
+
+	// 	if (!GLSL_InitGPUShader(&tr.calclevels4xShader[i], "calclevels4x", attribs, qtrue, extradefines, qtrue, fallbackShader_calclevels4x_vp, fallbackShader_calclevels4x_fp))
+	// 	{
+	// 		ri.Error(ERR_FATAL, "Could not load calclevels4x shader!");
+	// 	}
+
+	// 	GLSL_InitUniforms(&tr.calclevels4xShader[i]);
+
+	// 	GLSL_SetUniformInt(&tr.calclevels4xShader[i], UNIFORM_TEXTUREMAP, TB_DIFFUSEMAP);
+
+	// 	GLSL_FinishGPUShader(&tr.calclevels4xShader[i]);
+
+	// 	numEtcShaders++;		
+	// }
+
+
+	// // GLSL 1.10+ or GL_EXT_shadow_samplers extension are required for sampler2DShadow type
+	// if (glRefConfig.glslMajorVersion > 1 || (glRefConfig.glslMajorVersion == 1 && glRefConfig.glslMinorVersion >= 10)
+	//     || glRefConfig.shadowSamplers)
+	// {
+	// 	attribs = ATTR_POSITION | ATTR_TEXCOORD;
+	// 	extradefines[0] = '\0';
+
+	// 	if (qglesMajorVersion < 3 && glRefConfig.shadowSamplers)
+	// 	{
+	// 		Q_strcat(extradefines, 1024, "#extension GL_EXT_shadow_samplers : enable\n");
+	// 	}
+
+	// 	if (r_shadowFilter->integer >= 1)
+	// 		Q_strcat(extradefines, 1024, "#define USE_SHADOW_FILTER\n");
+
+	// 	if (r_shadowFilter->integer >= 2)
+	// 		Q_strcat(extradefines, 1024, "#define USE_SHADOW_FILTER2\n");
+
+	// 	if (r_shadowCascadeZFar->integer != 0)
+	// 		Q_strcat(extradefines, 1024, "#define USE_SHADOW_CASCADE\n");
+
+	// 	Q_strcat(extradefines, 1024, va("#define r_shadowMapSize %f\n", r_shadowMapSize->value));
+	// 	Q_strcat(extradefines, 1024, va("#define r_shadowCascadeZFar %f\n", r_shadowCascadeZFar->value));
+
+	// 	if (!GLSL_InitGPUShader(&tr.shadowmaskShader, "shadowmask", attribs, qtrue, extradefines, qtrue, fallbackShader_shadowmask_vp, fallbackShader_shadowmask_fp))
+	// 	{
+	// 		ri.Error(ERR_FATAL, "Could not load shadowmask shader!");
+	// 	}
 	
-		GLSL_InitUniforms(&tr.shadowmaskShader);
+	// 	GLSL_InitUniforms(&tr.shadowmaskShader);
 
-		GLSL_SetUniformInt(&tr.shadowmaskShader, UNIFORM_SCREENDEPTHMAP, TB_COLORMAP);
-		GLSL_SetUniformInt(&tr.shadowmaskShader, UNIFORM_SHADOWMAP,  TB_SHADOWMAP);
-		GLSL_SetUniformInt(&tr.shadowmaskShader, UNIFORM_SHADOWMAP2, TB_SHADOWMAP2);
-		GLSL_SetUniformInt(&tr.shadowmaskShader, UNIFORM_SHADOWMAP3, TB_SHADOWMAP3);
-		GLSL_SetUniformInt(&tr.shadowmaskShader, UNIFORM_SHADOWMAP4, TB_SHADOWMAP4);
+	// 	GLSL_SetUniformInt(&tr.shadowmaskShader, UNIFORM_SCREENDEPTHMAP, TB_COLORMAP);
+	// 	GLSL_SetUniformInt(&tr.shadowmaskShader, UNIFORM_SHADOWMAP,  TB_SHADOWMAP);
+	// 	GLSL_SetUniformInt(&tr.shadowmaskShader, UNIFORM_SHADOWMAP2, TB_SHADOWMAP2);
+	// 	GLSL_SetUniformInt(&tr.shadowmaskShader, UNIFORM_SHADOWMAP3, TB_SHADOWMAP3);
+	// 	GLSL_SetUniformInt(&tr.shadowmaskShader, UNIFORM_SHADOWMAP4, TB_SHADOWMAP4);
 
-		GLSL_FinishGPUShader(&tr.shadowmaskShader);
+	// 	GLSL_FinishGPUShader(&tr.shadowmaskShader);
 
-		numEtcShaders++;
-	}
+	// 	numEtcShaders++;
+	// }
 
 
 	// GLSL 1.10+ or GL_OES_standard_derivatives extension are required for dFdx() and dFdy() GLSL functions
-	if (glRefConfig.glslMajorVersion > 1 || (glRefConfig.glslMajorVersion == 1 && glRefConfig.glslMinorVersion >= 10)
-	    || glRefConfig.standardDerivatives)
-	{
-		attribs = ATTR_POSITION | ATTR_TEXCOORD;
-		extradefines[0] = '\0';
+	// if (glRefConfig.glslMajorVersion > 1 || (glRefConfig.glslMajorVersion == 1 && glRefConfig.glslMinorVersion >= 10)
+	//     || glRefConfig.standardDerivatives)
+	// {
+	// 	attribs = ATTR_POSITION | ATTR_TEXCOORD;
+	// 	extradefines[0] = '\0';
 
-		if (qglesMajorVersion < 3 && glRefConfig.standardDerivatives)
-		{
-			Q_strcat(extradefines, 1024, "#extension GL_OES_standard_derivatives : enable\n");
-		}
+	// 	if (qglesMajorVersion < 3 && glRefConfig.standardDerivatives)
+	// 	{
+	// 		Q_strcat(extradefines, 1024, "#extension GL_OES_standard_derivatives : enable\n");
+	// 	}
 
-		if (!GLSL_InitGPUShader(&tr.ssaoShader, "ssao", attribs, qtrue, extradefines, qtrue, fallbackShader_ssao_vp, fallbackShader_ssao_fp))
-		{
-			ri.Error(ERR_FATAL, "Could not load ssao shader!");
-		}
+	// 	if (!GLSL_InitGPUShader(&tr.ssaoShader, "ssao", attribs, qtrue, extradefines, qtrue, fallbackShader_ssao_vp, fallbackShader_ssao_fp))
+	// 	{
+	// 		ri.Error(ERR_FATAL, "Could not load ssao shader!");
+	// 	}
 
-		GLSL_InitUniforms(&tr.ssaoShader);
+	// 	GLSL_InitUniforms(&tr.ssaoShader);
 
-		GLSL_SetUniformInt(&tr.ssaoShader, UNIFORM_SCREENDEPTHMAP, TB_COLORMAP);
+	// 	GLSL_SetUniformInt(&tr.ssaoShader, UNIFORM_SCREENDEPTHMAP, TB_COLORMAP);
 
-		GLSL_FinishGPUShader(&tr.ssaoShader);
+	// 	GLSL_FinishGPUShader(&tr.ssaoShader);
 
-		numEtcShaders++;
-
-
-		for (i = 0; i < 4; i++)
-		{
-			attribs = ATTR_POSITION | ATTR_TEXCOORD;
-			extradefines[0] = '\0';
-
-			if (qglesMajorVersion < 3 && glRefConfig.standardDerivatives)
-			{
-				Q_strcat(extradefines, 1024, "#extension GL_OES_standard_derivatives : enable\n");
-			}
-
-			if (i & 1)
-				Q_strcat(extradefines, 1024, "#define USE_VERTICAL_BLUR\n");
-			else
-				Q_strcat(extradefines, 1024, "#define USE_HORIZONTAL_BLUR\n");
-
-			if (!(i & 2))
-				Q_strcat(extradefines, 1024, "#define USE_DEPTH\n");
+	// 	numEtcShaders++;
 
 
-			if (!GLSL_InitGPUShader(&tr.depthBlurShader[i], "depthBlur", attribs, qtrue, extradefines, qtrue, fallbackShader_depthblur_vp, fallbackShader_depthblur_fp))
-			{
-				ri.Error(ERR_FATAL, "Could not load depthBlur shader!");
-			}
+	// 	for (i = 0; i < 4; i++)
+	// 	{
+	// 		attribs = ATTR_POSITION | ATTR_TEXCOORD;
+	// 		extradefines[0] = '\0';
+
+	// 		if (qglesMajorVersion < 3 && glRefConfig.standardDerivatives)
+	// 		{
+	// 			Q_strcat(extradefines, 1024, "#extension GL_OES_standard_derivatives : enable\n");
+	// 		}
+
+	// 		if (i & 1)
+	// 			Q_strcat(extradefines, 1024, "#define USE_VERTICAL_BLUR\n");
+	// 		else
+	// 			Q_strcat(extradefines, 1024, "#define USE_HORIZONTAL_BLUR\n");
+
+	// 		if (!(i & 2))
+	// 			Q_strcat(extradefines, 1024, "#define USE_DEPTH\n");
+
+
+	// 		if (!GLSL_InitGPUShader(&tr.depthBlurShader[i], "depthBlur", attribs, qtrue, extradefines, qtrue, fallbackShader_depthblur_vp, fallbackShader_depthblur_fp))
+	// 		{
+	// 			ri.Error(ERR_FATAL, "Could not load depthBlur shader!");
+	// 		}
 		
-			GLSL_InitUniforms(&tr.depthBlurShader[i]);
+	// 		GLSL_InitUniforms(&tr.depthBlurShader[i]);
 
-			GLSL_SetUniformInt(&tr.depthBlurShader[i], UNIFORM_SCREENIMAGEMAP, TB_COLORMAP);
-			GLSL_SetUniformInt(&tr.depthBlurShader[i], UNIFORM_SCREENDEPTHMAP, TB_LIGHTMAP);
+	// 		GLSL_SetUniformInt(&tr.depthBlurShader[i], UNIFORM_SCREENIMAGEMAP, TB_COLORMAP);
+	// 		GLSL_SetUniformInt(&tr.depthBlurShader[i], UNIFORM_SCREENDEPTHMAP, TB_LIGHTMAP);
 
-			GLSL_FinishGPUShader(&tr.depthBlurShader[i]);
+	// 		GLSL_FinishGPUShader(&tr.depthBlurShader[i]);
 
-			numEtcShaders++;
-		}
-	}
+	// 		numEtcShaders++;
+	// 	}
+	// }
 
 #if 0
 	attribs = ATTR_POSITION | ATTR_TEXCOORD;
@@ -1540,45 +1555,45 @@ void GLSL_InitGPUShaders(void)
 
 void GLSL_ShutdownGPUShaders(void)
 {
-	int i;
+	// int i;
 
-	ri.Printf(PRINT_ALL, "------- GLSL_ShutdownGPUShaders -------\n");
+	// ri.Printf(PRINT_ALL, "------- GLSL_ShutdownGPUShaders -------\n");
 
-	for (i = 0; i < ATTR_INDEX_COUNT && i < glRefConfig.maxVertexAttribs; i++)
-		qglDisableVertexAttribArray(i);
+	// for (i = 0; i < ATTR_INDEX_COUNT && i < glRefConfig.maxVertexAttribs; i++)
+	// 	qglDisableVertexAttribArray(i);
 
-	GL_BindNullProgram();
+	// GL_BindNullProgram();
 
-	for ( i = 0; i < GENERICDEF_COUNT; i++)
-		GLSL_DeleteGPUShader(&tr.genericShader[i]);
+	// for ( i = 0; i < GENERICDEF_COUNT; i++)
+	// 	GLSL_DeleteGPUShader(&tr.genericShader[i]);
 
-	GLSL_DeleteGPUShader(&tr.textureColorShader);
+	// GLSL_DeleteGPUShader(&tr.textureColorShader);
 
-	for ( i = 0; i < FOGDEF_COUNT; i++)
-		GLSL_DeleteGPUShader(&tr.fogShader[i]);
+	// for ( i = 0; i < FOGDEF_COUNT; i++)
+	// 	GLSL_DeleteGPUShader(&tr.fogShader[i]);
 
-	for ( i = 0; i < DLIGHTDEF_COUNT; i++)
-		GLSL_DeleteGPUShader(&tr.dlightShader[i]);
+	// for ( i = 0; i < DLIGHTDEF_COUNT; i++)
+	// 	GLSL_DeleteGPUShader(&tr.dlightShader[i]);
 
-	for ( i = 0; i < LIGHTDEF_COUNT; i++)
-		GLSL_DeleteGPUShader(&tr.lightallShader[i]);
+	// for ( i = 0; i < LIGHTDEF_COUNT; i++)
+	// 	GLSL_DeleteGPUShader(&tr.lightallShader[i]);
 
-	for ( i = 0; i < SHADOWMAPDEF_COUNT; i++)
-		GLSL_DeleteGPUShader(&tr.shadowmapShader[i]);
+	// for ( i = 0; i < SHADOWMAPDEF_COUNT; i++)
+	// 	GLSL_DeleteGPUShader(&tr.shadowmapShader[i]);
 
-	GLSL_DeleteGPUShader(&tr.pshadowShader);
-	GLSL_DeleteGPUShader(&tr.down4xShader);
-	GLSL_DeleteGPUShader(&tr.bokehShader);
-	GLSL_DeleteGPUShader(&tr.tonemapShader);
+	// GLSL_DeleteGPUShader(&tr.pshadowShader);
+	// GLSL_DeleteGPUShader(&tr.down4xShader);
+	// GLSL_DeleteGPUShader(&tr.bokehShader);
+	// GLSL_DeleteGPUShader(&tr.tonemapShader);
 
-	for ( i = 0; i < 2; i++)
-		GLSL_DeleteGPUShader(&tr.calclevels4xShader[i]);
+	// for ( i = 0; i < 2; i++)
+	// 	GLSL_DeleteGPUShader(&tr.calclevels4xShader[i]);
 
-	GLSL_DeleteGPUShader(&tr.shadowmaskShader);
-	GLSL_DeleteGPUShader(&tr.ssaoShader);
+	// GLSL_DeleteGPUShader(&tr.shadowmaskShader);
+	// GLSL_DeleteGPUShader(&tr.ssaoShader);
 
-	for ( i = 0; i < 4; i++)
-		GLSL_DeleteGPUShader(&tr.depthBlurShader[i]);
+	// for ( i = 0; i < 4; i++)
+	// 	GLSL_DeleteGPUShader(&tr.depthBlurShader[i]);
 }
 
 

@@ -1108,7 +1108,7 @@ ifeq ($(PLATFORM),emscripten)
   CLIENT_LDFLAGS+=-s MAX_WEBGL_VERSION=2
   CLIENT_LDFLAGS+=-s FULL_ES2=1
   # The HTML file can use these functions to load extra files before the game starts.
-  CLIENT_LDFLAGS+=-s EXPORTED_RUNTIME_METHODS=FS,addRunDependency,removeRunDependency,cwrap,stackAlloc,out
+  CLIENT_LDFLAGS+=-s EXPORTED_RUNTIME_METHODS=FS,addRunDependency,removeRunDependency,cwrap,stackAlloc,out,AL
   # CLIENT_LDFLAGS+=-s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE='["$$stackAlloc"]'
   CLIENT_LDFLAGS+=-s EXIT_RUNTIME=1
   CLIENT_LDFLAGS+=-s EXPORT_ES6
@@ -1116,7 +1116,7 @@ ifeq ($(PLATFORM),emscripten)
 
   SERVER_LDFLAGS+=-s TOTAL_MEMORY=256mb
   SERVER_LDFLAGS+=-s STACK_SIZE=5MB
-  SERVER_LDFLAGS+=-s EXPORTED_RUNTIME_METHODS=FS,addRunDependency,removeRunDependency,cwrap,stackAlloc,out
+  SERVER_LDFLAGS+=-s EXPORTED_RUNTIME_METHODS=FS,addRunDependency,removeRunDependency,cwrap,stackAlloc,out,AL
   # SERVER_LDFLAGS+=-s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE='["$$stackAlloc"]'
   SERVER_LDFLAGS+=-s EXIT_RUNTIME=1
   SERVER_LDFLAGS+=-s EXPORT_ES6

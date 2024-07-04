@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <string.h> // memcpy
 
-trGlobals_t		tr;
+trGlobals_t		tr = {0};
 
 static float	s_flipMatrix[16] = {
 	// convert from our coordinate system (looking down X)

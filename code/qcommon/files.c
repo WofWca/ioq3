@@ -3575,12 +3575,12 @@ static void FS_CheckPak0( void )
 		}
 	}
 
-	if(!foundPak && !foundTA && Q_stricmp(com_basegame->string, BASEGAME))
+	// if(!foundPak && !foundTA && Q_stricmp(com_basegame->string, BASEGAME))
 	{
 		Cvar_Set("com_standalone", "1");
 	}
-	else
-		Cvar_Set("com_standalone", "0");
+	// else
+	// 	Cvar_Set("com_standalone", "0");
 
 	if(!com_standalone->integer)
 	{
