@@ -1,3 +1,5 @@
+precision highp float;
+
 uniform sampler2D u_ShadowMap;
 
 uniform vec3      u_LightForward;

@@ -1,3 +1,5 @@
+precision highp float;
+
 uniform sampler2D u_DiffuseMap;
 
 uniform int       u_AlphaTest;

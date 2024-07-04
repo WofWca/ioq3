@@ -1,3 +1,5 @@
+precision highp float;
+
 uniform sampler2D u_TextureMap;
 
 uniform vec2      u_InvTexRes;

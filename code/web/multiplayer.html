@@ -1,0 +1,372 @@
+<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Longest Yard</title>
+<style>
+html, body { margin: 0; padding: 0; overflow: hidden; background: rgb(0, 0, 0);}
+canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; object-fit: contain; }
+#progress { position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin: auto; width: 80%; height: 4em; background: black; border: .5em solid white; padding: .5em; }
+#blocker { 
+    position: absolute; 
+    top: 0; 
+    bottom: 0; 
+    left: 0; 
+    right: 0; 
+    background: transparent; 
+    color: white; 
+    display: flex; 
+}
+
+#move, #look {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#done { 
+    width: 0; 
+    height: 100%; 
+    background: white; 
+}
+#rotator {
+    transform: none;
+    transform-origin: bottom left;
+    position:absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow:hidden;
+}
+
+@media (not (any-pointer: fine)) and (orientation: portrait) {
+    #rotator {
+        transform: rotate(90deg);
+        transform-origin: bottom left;
+        top: -100vw;
+        left: 0;
+        width: 100vh;
+        height: 100vw;
+    }
+}
+#blocker * { display: none; }
+@media (not (any-pointer: fine)) {
+    #blocker * { display: block; }
+}
+</style>
+<div id=rotator>
+<div id=progress style=display:none><div id=done></div></div>
+
+
+<canvas id=canvas></canvas>
+
+<div id=blocker>
+    <div id="move"></div>
+    <div id="look"></div>
+</div>
+</div>
+<script type=module>
+
+// HACK: prevent the browser from queueing too many frames. Defeat pipelineing by calling getError() after each frame.
+// This synchronizes the content process and the GPU process. We don't want to delay finished frames, so we do this just after
+// the browser presents the frame. This is achieved by calling postMessage() in RAF. The message will not be processed
+// until the frame is presented.
+const originalGetContext = HTMLCanvasElement.prototype.getContext;
+let context = null;
+HTMLCanvasElement.prototype.getContext = function(type, options) {
+    return context = originalGetContext.call(this, type, options);
+};
+const originalRAF = requestAnimationFrame; // save this now in case someone else tries to hook it later, we don't want to use their hooked version for our noop stuff.
+const rafChannel = new MessageChannel();
+const nopRAF = () => rafChannel.port1.postMessage(' ');
+rafChannel.port2.onmessage = ()=>{
+    if (context) context.readPixels(0, 0, 1, 1, context.RGBA, context.UNSIGNED_BYTE, new Uint8Array(4));
+    originalRAF.call(self, nopRAF);
+};
+originalRAF.call(self, nopRAF);
+
+// Fool Emscripten into using the right screen resolution for rotated mode.
+// TODO: vid_restart if the screen resolution changes.
+// TODO: We render at CSS pixel resolution, but should we render at device pixel resolution instead? Maybe that would be needlessly high?
+const screenPrototype = Object.getPrototypeOf(screen);
+const originalScreenWidthProperty = Object.getOwnPropertyDescriptor(screenPrototype, 'width');
+const originalScreenHeightProperty = Object.getOwnPropertyDescriptor(screenPrototype, 'height');
+let rotated = false;
+function rotateIfPortraitTouchscreen(e) {
+    rotated = e.matches;
+    if (rotated) {
+        Object.defineProperty(screen, 'width', originalScreenHeightProperty);
+        Object.defineProperty(screen, 'height', originalScreenWidthProperty);
+    } else {
+        Object.defineProperty(screen, 'width', originalScreenWidthProperty);
+        Object.defineProperty(screen, 'height', originalScreenHeightProperty);
+    }
+}
+const mediaQuery = window.matchMedia("(not (any-pointer: fine)) and (orientation: portrait)")
+rotateIfPortraitTouchscreen(mediaQuery);
+mediaQuery.addEventListener('change', rotateIfPortraitTouchscreen);
+
+
+import { GamepadEmulator } from './GamepadEmulator.js';
+const emulator = new GamepadEmulator();
+const gamepad = emulator.AddEmulatedGamepad(null, true);
+emulator.AddDisplayJoystickEventListeners(0, [{
+    directions: { up: true, down: true, left: true, right: true },
+    dragDistance: 100,
+    tapTarget: move,
+    xAxisIndex: 0,
+    yAxisIndex: 1,
+}]);
+
+let lastPointerEvent = null;
+let fakeMouseDown = false;
+
+look.addEventListener('pointerdown', (e) => {
+    lastPointerEvent = e;
+    if (e.offsetY < e.target.clientHeight / 2) {
+        fakeMouseDown = true;
+        const fakeMouseDownEvent = new MouseEvent('mousedown', {
+            clientX: e.offsetX * 8,
+            clientY: e.offsetY * 8,
+            bubbles: true,
+            cancelable: true,
+            view: window
+        });
+        canvas.dispatchEvent(fakeMouseDownEvent);
+    }
+}, { passive: false });
+
+look.addEventListener('pointermove', (e) => {
+    if (lastPointerEvent && lastPointerEvent.pointerId === e.pointerId) {
+        let deltaX = e.offsetX - lastPointerEvent.offsetX;
+        let deltaY = e.offsetY - lastPointerEvent.offsetY;
+
+        const fakeMouseEvent = new MouseEvent('mousemove', {
+            clientX: e.offsetX * 8,
+            clientY: e.offsetY * 8,
+            movementX: deltaX * 8,
+            movementY: deltaY * 8,
+            bubbles: true,
+            cancelable: true,
+            view: window
+        });
+
+        canvas.dispatchEvent(fakeMouseEvent);
+        lastPointerEvent = e;
+    }
+    e.preventDefault();
+}, { passive: false });
+
+look.addEventListener('pointerup', (e) => {
+    if (lastPointerEvent && lastPointerEvent.pointerId === e.pointerId) {
+        lastPointerEvent = null;
+        if (fakeMouseDown) {
+            fakeMouseDown = false;
+            const fakeMouseUpEvent = new MouseEvent('mouseup', {
+                clientX: e.offsetX * 8,
+                clientY: e.offsetY * 8,
+                bubbles: true,
+                cancelable: true,
+                view: window
+            });
+            canvas.dispatchEvent(fakeMouseUpEvent);
+        }
+    }
+}, { passive: false });
+
+look.addEventListener('pointercancel', (e) => {
+    if (lastPointerEvent && lastPointerEvent.pointerId === e.pointerId) {
+        lastPointerEvent = null;
+    }
+}, { passive: false });
+
+
+document.addEventListener('pointerlockchange', ()=>{if (document.pointerLockElement && !document.fullscreenElement) document.documentElement.requestFullscreen()});
+document.addEventListener('fullscreenchange', () => { if (!document.pointerLockElement) canvas.requestPointerLock({ unadjustedMovement: true }); });
+const fullscreenAndPointerLock = async () => { if (!document.pointerLockElement) canvas.requestPointerLock({ unadjustedMovement: true }); if (!document.fullscreenElement) document.documentElement.requestFullscreen(); };
+window.addEventListener('keydown', fullscreenAndPointerLock, { capture: true });
+window.addEventListener('touchend', fullscreenAndPointerLock, { capture: true });
+window.addEventListener('mousedown', fullscreenAndPointerLock, { capture: true });
+blocker.addEventListener('touchmove', (e) => e.preventDefault() ); // required for touchend to fire if the touch moves
+
+
+const defaultKeyBindingKeyCodes = { "KeyW": true, "KeyA": true, "KeyS": true, "KeyD": true, "KeyC": true, "KeyT": true, "Digit1": true, "Digit2": true, "Digit3": true, "Digit4": true, "Digit5": true, "Digit6": true, "Digit7": true, "Digit8": true, "Digit9": true, "Tab": true, "Space": true, "Enter": true, "NumpadEnter": true, "Delete": true, "Slash": true, "Backslash": true, "ArrowUp": true, "ArrowDown": true, "ArrowLeft": true, "ArrowRight": true, "PageDown": true, "End": true, "Escape": true, "ControlLeft": true, "ControlRight": true, "ShiftLeft": true, "ShiftRight": true, "AltLeft": true, "AltRight": true };
+window.addEventListener("keydown", (e) => {
+        // Emscripten SDL2 will preventDefault all keyboard events which prevents browser keyboard shortcuts from working.
+        // This was supposed to be fixed in https://github.com/emscripten-core/emscripten/issues/16462 however the fix regressed.
+        // This hack lets the browser handle everything, except for the default Quake III keybindings.
+        if (!defaultKeyBindingKeyCodes[e.code]) e.preventDefault = () => false;
+    }, { capture: true });
+
+let { promise: demoq3pak0Promise, resolve: gotDemoq3pak0 } = Promise.withResolvers();
+
+let generatedArguments = `
+    +set r_mode -2
+    +set fs_game demoq3
+    +set cg_fovGunAdjust 1
+    +set cg_fovAspectAdjust 1
+    +set com_maxfps 0
+    +set r_swapInverval 1
+    +set net_enabled 1
+    +set net_peer_server "wss://peer-server.thelongestyard.link:443"
+    +set r_fullscreen 0
+`;
+
+// broken
+    // +set s_muteWhenUnfocused 1
+    // +set s_muteWhenMinimized 1
+
+const query = new URLSearchParams(window.location.search);
+let server = query.get('server');
+if (!server) {
+    server = '';
+    const chars = ['bcdfghjklmnprstvwxyz', 'aeiou'];
+    for (let i = 0; i < 8; i++)
+        server += chars[i % 2].charAt(Math.random() * chars[i % 2].length | 0);
+    generatedArguments += `
+        +set net_server_name "${server}"
+        +map q3dm17
+        +set g_spskill 2
+        +set bot_minplayers 2
+        `;
+        //        +set bot_minplayers 4
+
+    const newUrl = new URL(window.location);
+    newUrl.searchParams.set('server', server);
+    // window.history.replaceState({}, '', newUrl);
+} else {
+    generatedArguments += `+connect ${server}.humblenet`;
+}
+
+
+    // +map q3dm17
+    // +addbot daemia 2
+    // +addbot visor 2
+    // +addbot sarge 2
+    // +addbot stripe 2
+    // +addbot major 2
+    const buildPath = '../../build/debug-emscripten-wasm32';
+
+import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then((ioquake3)=>{
+    ioquake3.default({
+        canvas: canvas,
+        arguments: generatedArguments.trim().split(/\s+/),
+        locateFile: (file) => `${buildPath}/${file}`,
+        onRuntimeInitialized: () => {
+            if (/Android/i.test(navigator.userAgent) && /Chrome/i.test(navigator.userAgent)) {
+                // Need to fool Emscripten into believing that pointer lock is enabled so we can send it fake pointer events.
+                Object.defineProperty(document, 'pointerLockElement', { get: () => canvas });
+
+                const fakePointerLockChangeEvent = new Event('pointerlockchange', {
+                    bubbles: true,
+                    cancelable: true
+                });
+
+                setTimeout(()=>document.dispatchEvent(fakePointerLockChangeEvent), 1000);
+            }
+        },
+        preRun: [async (module) => {
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) for (const c of Object.values(module.AL.contexts)) c.audioCtx.suspend();
+                else for (const c of Object.values(module.AL.contexts)) c.audioCtx.resume();
+            });
+            // Add the fetched asset files to the Emscripten virtual filesystem.
+            module.addRunDependency('setup-ioq3-filesystem');
+            module.FS.mkdirTree('/demoq3');
+            module.FS.writeFile('/demoq3/pak0.pk3', await demoq3pak0Promise);
+            module.FS.writeFile('/demoq3/autoexec.cfg', `
+                set in_joystick 1
+                set in_joystickUseAnalog 1
+                set j_forward "0.005"
+                set j_side "0.005"
+                set j_pitch "0.005"
+                set j_yaw "0.01"
+                bind PAD0_LEFTSTICK_LEFT "+moveleft"
+                bind PAD0_LEFTSTICK_RIGHT "+moveright"
+                bind PAD0_LEFTSTICK_UP "+forward"
+                bind PAD0_LEFTSTICK_DOWN "+back"
+                bind PAD0_DPAD_LEFT "+moveleft"
+                bind PAD0_DPAD_UP "+forward"
+                bind PAD0_DPAD_RIGHT "+moveright"
+                bind PAD0_DPAD_DOWN "+back"
+                bind PAD0_RIGHTSTICK_LEFT "+left"
+                bind PAD0_RIGHTSTICK_RIGHT "+right"
+                bind PAD0_RIGHTSTICK_UP "+lookup"
+                bind PAD0_RIGHTSTICK_DOWN "+lookdown"
+                bind PAD0_RIGHTTRIGGER "+attack"
+                bind PAD0_LEFTTRIGGER "+zoom"
+                bind PAD0_A "+moveup"
+                bind PAD0_B "weapnext"
+                bind PAD0_X "weapprev"
+                bind PAD0_Y "weapon 1"
+                bind PAD0_LEFTSHOULDER "+zoom"
+                bind PAD0_RIGHTSHOULDER "+attack"
+                bind PAD0_START "togglemenu"
+                bind PAD0_BACK "+button3"
+                bind PAD0_LEFTSTICK_CLICK "+zoom"
+                bind PAD0_RIGHTSTICK_CLICK "+button3"
+
+                set r_ext_texture_filter_anisotropic 1
+                set r_ext_max_anisotropy 16
+                set r_ext_multisample 4
+                set r_ext_framebuffer_multisample 4
+                set r_subdivisions 1
+                set r_lodBias -2
+                set r_textureMode "GL_LINEAR_MIPMAP_LINEAR"
+                set r_picmip 0
+                set r_lodCurveError 10000
+                set r_ignoreGLErrors 1
+            `, { encoding: 'utf8' });
+            progress.style.display = 'none';
+            module.removeRunDependency('setup-ioq3-filesystem');
+        }],
+    });
+});
+
+// demoq3/pak0.pk3 is original Quake 3 demo assets. Fetch them from a tarfile in a gz file in a shell script in a zip file at the Internet Archive.
+// First check to see if we have it in the cache
+const cache = await caches.open('thelongestyard');
+const cacheResponse = await cache.match('/demoq3/pak0.pk3');
+let demoq3pak0 = await cacheResponse?.arrayBuffer();
+if (demoq3pak0) {
+    demoq3pak0 = new Uint8Array(demoq3pak0);
+} else {
+    progress.style.display = 'block';
+    const demoSize = 49289300;
+    let sh = await fetch('https://archive.org/download/tucows_286139_Quake_III_Arena/linuxq3ademo-1.11-6.x86.gz.zip/linuxq3ademo-1.11-6.x86.gz.sh').then(r => r.body);
+    // Skip the first 0x155C bytes of the shell script to get the gz file. Ugh, the streams API is terrible.
+    // Also update the progress bar.
+    let downloaded = 0;
+    let gz = sh.pipeThrough(new TransformStream({
+        transform(chunk, controller) {
+            const skip = 0x155C;
+            if (downloaded >= skip) {
+                downloaded += chunk.byteLength;
+                done.style.width = `${downloaded / demoSize * 100}%`;
+                controller.enqueue(chunk);
+                return;
+            }
+            const chunkStart = downloaded;
+            const chunkEnd = downloaded + chunk.byteLength;
+            downloaded = chunkEnd;
+            if (chunkEnd < skip) return;
+            controller.enqueue(chunk.subarray(skip - chunkStart));
+            done.style.width = `${downloaded / demoSize * 100}%`;
+        }
+    }));
+    let tar = new Uint8Array(await new Response(gz.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+    // the tar format is structured in 512 byte blocks. Read the blocks and find the pak0.pk3 file
+    for (let offset = 0; offset < tar.byteLength;) {
+        let name = String.fromCharCode.apply(null, tar.subarray(offset, offset + 100)).replace(/\0/g, '').trim();
+        let size = parseInt(String.fromCharCode.apply(null, tar.subarray(offset + 124, offset + 136)).replace(/\0/g, '').trim(), 8);
+        if (name === 'demoq3/pak0.pk3') {
+            demoq3pak0 = tar.subarray(offset + 512, offset + 512 + size);
+            cache.put('/demoq3/pak0.pk3', new Response(demoq3pak0, { headers: { 'Content-Type': 'application/octet-stream' } }));
+            break;
+        }
+        offset += 512 + Math.ceil(size / 512) * 512;
+    }
+}
+if (!demoq3pak0) throw new Error('demoq3/pak0.pk3 not found');
+gotDemoq3pak0(demoq3pak0);
+
+</script>

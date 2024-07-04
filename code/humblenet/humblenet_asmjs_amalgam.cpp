@@ -7660,7 +7660,7 @@ struct libwebrtc_context* libwebrtc_create_context( lwrtc_callback_function call
 		libwebrtc.create = function() {
 			var connection = new this.RTCPeerConnection(this.options,null);
 
-			connection.trickle = false; // must not use trickle till native side can handle accepting a candidate.
+			connection.trickle = true;
 
 			connection.destroy = this.destroy;
 
@@ -7974,6 +7974,7 @@ int libwebrtc_add_ice_candidate( struct libwebrtc_connection* connection, const 
 
 		var options = {};
 		options.candidate = UTF8ToString($1);
+		options.sdpMLineIndex = 0;
 
 		if( connection.iceConnectionState == 'checking' || connection.iceConnectionState == 'connected'
 		   // FF workaround
@@ -8323,7 +8324,7 @@ struct lws* lws_client_connect_extended(struct lws_context* ctx , const char* ur
 int lws_write( struct lws* socket, const void* data, int len, enum lws_write_protocol protocol ) {
 	return EM_ASM_INT({
 		var socket = Module.__libwebsocket.sockets.get( $0 );
-		if( ! socket ) {
+		if( ! socket || socket.readyState !== 1) {
 			return -1;
 		}
 

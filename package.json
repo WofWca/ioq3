@@ -1,0 +1,1 @@
+{ "dependencies": { "esbuild": "^0.21.5", "virtual-gamepad-lib": "^0.0.4" } }

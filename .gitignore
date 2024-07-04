@@ -9,6 +9,8 @@ Makefile.local
 /missionpack
 /.cache/
 /compile_commands.json
+/node_modules
+/bun.lockb
 
 # OS X
 ####################
