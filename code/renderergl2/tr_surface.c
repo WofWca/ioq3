@@ -408,6 +408,7 @@ static qboolean RB_SurfaceVaoCached(int numVerts, srfVert_t *verts, int numIndex
 	qboolean recycleVertexBuffer = qfalse;
 	qboolean recycleIndexBuffer = qfalse;
 	qboolean endSurface = qfalse;
+	return qfalse;
 
 	if (!r_vaoCache->integer)
 		return qfalse;
