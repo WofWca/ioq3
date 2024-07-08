@@ -197,8 +197,10 @@ window.addEventListener("keydown", (e) => {
         if (!defaultKeyBindingKeyCodes[e.code]) e.preventDefault = () => false;
     }, { capture: true });
 
-let { promise: demoq3pak0Promise, resolve: gotDemoq3pak0 } = Promise.withResolvers();
-
+let gotDemoq3pak0;
+let demoq3pak0Promise = new Promise((resolve) => {
+    gotDemoq3pak0 = resolve;
+});
 let generatedArguments = `
     +set r_mode -2
     +set fs_game demoq3
