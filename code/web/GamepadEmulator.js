@@ -237,7 +237,6 @@ var _GamepadEmulator = class {
         config.tapTarget.setPointerCapture(downEvent.pointerId);
       else
         config.tapTarget.releasePointerCapture(downEvent.pointerId);
-      console.log("stick pointer down", config.tapTarget.hasPointerCapture(downEvent.pointerId));
       callback(true, 0, 0);
       document.addEventListener("pointermove", pointerMoveHandler, false);
       document.addEventListener("pointerup", pointerUpHandler, false);
