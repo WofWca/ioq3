@@ -23,8 +23,11 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
 }
 
 #done { 
-    width: 0; 
-    height: 100%; 
+    width: 100%;
+    height: 100%;
+    transform: scaleX(0);
+    transform-origin: center left;
+    transition: transform 5s;
     background: white; 
 }
 #rotator {
@@ -38,7 +41,7 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
     overflow:hidden;
 }
 
-@media (not (any-pointer: fine)) and (orientation: portrait) {
+@media (pointer: coarse) and (orientation: portrait) {
     #rotator {
         transform: rotate(90deg);
         transform-origin: bottom left;
@@ -49,12 +52,12 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
     }
 }
 #blocker * { display: none; }
-@media (not (any-pointer: fine)) {
+@media (pointer: coarse) {
     #blocker * { display: block; }
 }
 </style>
+<body>
 <div id=rotator>
-<div id=progress style=display:none><div id=done></div></div>
 
 
 <canvas id=canvas></canvas>
@@ -64,6 +67,9 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
     <div id="look"></div>
 </div>
 </div>
+<div id=progress><div id=done></div></div>
+</body>
+<script src="https://unpkg.com/compression-streams-polyfill"></script>
 <script type=module>
 
 // HACK: prevent the browser from queueing too many frames. Defeat pipelineing by calling getError() after each frame.
@@ -84,27 +90,16 @@ rafChannel.port2.onmessage = ()=>{
 };
 originalRAF.call(self, nopRAF);
 
-// Fool Emscripten into using the right screen resolution for rotated mode.
+// Fool Emscripten into rendering in landscape even on portrait displays.
 // TODO: vid_restart if the screen resolution changes.
 // TODO: We render at CSS pixel resolution, but should we render at device pixel resolution instead? Maybe that would be needlessly high?
 const screenPrototype = Object.getPrototypeOf(screen);
 const originalScreenWidthProperty = Object.getOwnPropertyDescriptor(screenPrototype, 'width');
 const originalScreenHeightProperty = Object.getOwnPropertyDescriptor(screenPrototype, 'height');
-let rotated = false;
-function rotateIfPortraitTouchscreen(e) {
-    rotated = e.matches;
-    if (rotated) {
-        Object.defineProperty(screen, 'width', originalScreenHeightProperty);
-        Object.defineProperty(screen, 'height', originalScreenWidthProperty);
-    } else {
-        Object.defineProperty(screen, 'width', originalScreenWidthProperty);
-        Object.defineProperty(screen, 'height', originalScreenHeightProperty);
-    }
+if (screen.height > screen.width) {
+    Object.defineProperty(screen, 'width', originalScreenHeightProperty);
+    Object.defineProperty(screen, 'height', originalScreenWidthProperty);
 }
-const mediaQuery = window.matchMedia("(not (any-pointer: fine)) and (orientation: portrait)")
-rotateIfPortraitTouchscreen(mediaQuery);
-mediaQuery.addEventListener('change', rotateIfPortraitTouchscreen);
-
 
 import { GamepadEmulator } from './GamepadEmulator.js';
 const emulator = new GamepadEmulator();
@@ -149,6 +144,11 @@ look.addEventListener('pointermove', (e) => {
             cancelable: true,
             view: window
         });
+        // Safari doesn't recognize movementX and movementY, so we have to set them manually.
+        if (fakeMouseEvent.movementX === undefined) {
+            fakeMouseEvent.movementX = deltaX * 8;
+            fakeMouseEvent.movementY = deltaY * 8;
+        }
 
         canvas.dispatchEvent(fakeMouseEvent);
         lastPointerEvent = e;
@@ -180,9 +180,9 @@ look.addEventListener('pointercancel', (e) => {
 }, { passive: false });
 
 
-document.addEventListener('pointerlockchange', ()=>{if (document.pointerLockElement && !document.fullscreenElement) document.documentElement.requestFullscreen()});
-document.addEventListener('fullscreenchange', () => { if (!document.pointerLockElement) canvas.requestPointerLock({ unadjustedMovement: true }); });
-const fullscreenAndPointerLock = async () => { if (!document.pointerLockElement) canvas.requestPointerLock({ unadjustedMovement: true }); if (!document.fullscreenElement) document.documentElement.requestFullscreen(); };
+document.addEventListener('pointerlockchange', ()=>{if (document.pointerLockElement && !document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen()});
+document.addEventListener('fullscreenchange', () => { if (!document.pointerLockElement && canvas.requestPointerLock) canvas.requestPointerLock({ unadjustedMovement: true }); });
+const fullscreenAndPointerLock = async () => { if (!document.pointerLockElement && canvas.requestPointerLock) canvas.requestPointerLock({ unadjustedMovement: true }); if (!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); };
 window.addEventListener('keydown', fullscreenAndPointerLock, { capture: true });
 window.addEventListener('touchend', fullscreenAndPointerLock, { capture: true });
 window.addEventListener('mousedown', fullscreenAndPointerLock, { capture: true });
@@ -240,31 +240,46 @@ if (!server) {
 }
 
 
-    // +map q3dm17
-    // +addbot daemia 2
-    // +addbot visor 2
-    // +addbot sarge 2
-    // +addbot stripe 2
-    // +addbot major 2
-    const buildPath = '../../build/debug-emscripten-wasm32';
+// +map q3dm17
+// +addbot daemia 2
+// +addbot visor 2
+// +addbot sarge 2
+// +addbot stripe 2
+// +addbot major 2
+const buildPath = '../../build/debug-emscripten-wasm32';
 
+// Fool Emscripten into thinking the browser supports pointer lock.
+if (!document.body.requestPointerLock) document.body.requestPointerLock = () => true;
+
+let firstMainLoop = true;
+let shadersCompiled = 0;
+let shadersTotal = 57;
 import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then((ioquake3)=>{
     ioquake3.default({
         canvas: canvas,
         arguments: generatedArguments.trim().split(/\s+/),
         locateFile: (file) => `${buildPath}/${file}`,
-        onRuntimeInitialized: () => {
-            if (/Android/i.test(navigator.userAgent) && /Chrome/i.test(navigator.userAgent)) {
-                // Need to fool Emscripten into believing that pointer lock is enabled so we can send it fake pointer events.
-                Object.defineProperty(document, 'pointerLockElement', { get: () => canvas });
+        postMainLoop: () => {
+            if (firstMainLoop) {
+                firstMainLoop = false;
+                // SDL is initialized now that the main loop has run for the first time.
+                if (window.matchMedia('(pointer: coarse)').matches){
+                    // Need to fool Emscripten into believing that pointer lock is enabled so we can send it fake pointer events.
+                    Object.defineProperty(document, 'pointerLockElement', { get: () => canvas });
 
-                const fakePointerLockChangeEvent = new Event('pointerlockchange', {
-                    bubbles: true,
-                    cancelable: true
-                });
-
-                setTimeout(()=>document.dispatchEvent(fakePointerLockChangeEvent), 1000);
+                    const fakePointerLockChangeEvent = new Event('pointerlockchange', {
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    document.dispatchEvent(fakePointerLockChangeEvent);
+                }
             }
+        },
+        printErr: (msg) => {
+            if (msg === '------------ Map Loading ------------') {
+                progress.style.display = 'none';
+            }
+            console.error(msg);
         },
         preRun: [async (module) => {
             document.addEventListener('visibilitychange', () => {
@@ -318,7 +333,6 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then((ioquake3)=>{
                 set r_lodCurveError 10000
                 set r_ignoreGLErrors 1
             `, { encoding: 'utf8' });
-            progress.style.display = 'none';
             module.removeRunDependency('setup-ioq3-filesystem');
         }],
     });
@@ -331,8 +345,8 @@ const cacheResponse = await cache.match('/demoq3/pak0.pk3');
 let demoq3pak0 = await cacheResponse?.arrayBuffer();
 if (demoq3pak0) {
     demoq3pak0 = new Uint8Array(demoq3pak0);
+    done.style.transform = 'scaleX(1)';
 } else {
-    progress.style.display = 'block';
     const demoSize = 49289300;
     let sh = await fetch('https://archive.org/download/tucows_286139_Quake_III_Arena/linuxq3ademo-1.11-6.x86.gz.zip/linuxq3ademo-1.11-6.x86.gz.sh').then(r => r.body);
     // Skip the first 0x155C bytes of the shell script to get the gz file. Ugh, the streams API is terrible.
@@ -343,7 +357,7 @@ if (demoq3pak0) {
             const skip = 0x155C;
             if (downloaded >= skip) {
                 downloaded += chunk.byteLength;
-                done.style.width = `${downloaded / demoSize * 100}%`;
+                done.style.transform = `scaleX(${downloaded / demoSize * .6 + .2})`;
                 controller.enqueue(chunk);
                 return;
             }
@@ -352,7 +366,10 @@ if (demoq3pak0) {
             downloaded = chunkEnd;
             if (chunkEnd < skip) return;
             controller.enqueue(chunk.subarray(skip - chunkStart));
-            done.style.width = `${downloaded / demoSize * 100}%`;
+            done.style.transform = `scaleX(${downloaded / demoSize * .6 + .2})`;
+            if (downloaded === demoSize) {
+                done.style.transform = 'scaleX(1)';
+            }
         }
     }));
     let tar = new Uint8Array(await new Response(gz.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
