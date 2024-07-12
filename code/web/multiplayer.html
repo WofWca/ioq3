@@ -69,7 +69,7 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
 </div>
 <div id=progress><div id=done></div></div>
 </body>
-<script src="https://unpkg.com/compression-streams-polyfill"></script>
+<script src="compression-streams-polyfill.0.1.7.js"></script>
 <script type='module'>
 
 let peerServer = 's://peer-server.thelongestyard.link';
@@ -79,7 +79,7 @@ if (location.hostname === 'localhost') {
 const peerServerWebSocket = `ws${peerServer}`;
 const peerServerHTTP = `http${peerServer}`;
 
-// HACK: prevent the browser from queueing too many frames. Defeat pipelineing by calling getError() after each frame.
+// HACK: prevent the browser from queueing too many frames. Defeat pipelineing by calling readPixels() after each frame.
 // This synchronizes the content process and the GPU process. We don't want to delay finished frames, so we do this just after
 // the browser presents the frame. This is achieved by calling postMessage() in RAF. The message will not be processed
 // until the frame is presented.
