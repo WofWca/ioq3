@@ -623,9 +623,6 @@ void RB_UpdateTessVao(unsigned int attribBits)
 
 			if (attribUpload & attribBit)
 			{
-				EM_ASM({
-					performance.mark('bufferSubData 1 vertices ' + $0);
-				}, tess.numVertexes * vAtb->stride);
 				// note: tess has a VBO where stride == size
 				qglBufferSubData(GL_ARRAY_BUFFER, vAtb->offset, tess.numVertexes * vAtb->stride, tess.attribPointers[attribIndex]);
 			}
@@ -653,9 +650,6 @@ void RB_UpdateTessVao(unsigned int attribBits)
 
 		// orphan old index buffer so we don't stall on it
 		qglBufferData(GL_ELEMENT_ARRAY_BUFFER, tess.vao->indexesSize, NULL, GL_DYNAMIC_DRAW);
-		EM_ASM({
-			performance.mark('bufferSubData 2 indices orphaned ' + $0);
-		}, tess.numIndexes * sizeof(tess.indexes[0]));
 		qglBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, tess.numIndexes * sizeof(tess.indexes[0]), tess.indexes);
 	}
 }
@@ -808,18 +802,12 @@ void VaoCache_Commit(void)
 		if (vcq.vertexCommitSize)
 		{
 			qglBindBuffer(GL_ARRAY_BUFFER, vc.vao->vertexesVBO);
-			EM_ASM({
-				performance.mark('bufferSubData 3 vertices ' + $0 );
-			}, vcq.vertexCommitSize);
 			qglBufferSubData(GL_ARRAY_BUFFER, vc.vertexOffset, vcq.vertexCommitSize, vcq.vertexes);
 			vc.vertexOffset += vcq.vertexCommitSize;
 		}
 
 		if (vcq.indexCommitSize)
 		{
-			EM_ASM({
-				performance.mark('bufferSubData 4 indices ' + $0);
-			}, vcq.indexCommitSize);
 			qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vc.vao->indexesIBO);
 			qglBufferSubData(GL_ELEMENT_ARRAY_BUFFER, vc.indexOffset, vcq.indexCommitSize, vcq.indexes);
 			vc.indexOffset += vcq.indexCommitSize;

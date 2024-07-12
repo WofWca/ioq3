@@ -1,5 +1,5 @@
 <!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The Longest Yard</title>
+<title>Quake III Arena Demo</title>
 <style>
 html, body { margin: 0; padding: 0; overflow: hidden; background: rgb(0, 0, 0);}
 canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; object-fit: contain; }
@@ -25,7 +25,7 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
 #done { 
     width: 100%;
     height: 100%;
-    transform: scaleX(0);
+    transform: scaleX(0.05);
     transform-origin: center left;
     transition: transform 5s;
     background: white; 
@@ -70,7 +70,14 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
 <div id=progress><div id=done></div></div>
 </body>
 <script src="https://unpkg.com/compression-streams-polyfill"></script>
-<script type=module>
+<script type='module'>
+
+let peerServer = 's://peer-server.thelongestyard.link';
+if (location.hostname === 'localhost') {
+    peerServer = '://localhost:8080';
+}
+const peerServerWebSocket = `ws${peerServer}`;
+const peerServerHTTP = `http${peerServer}`;
 
 // HACK: prevent the browser from queueing too many frames. Defeat pipelineing by calling getError() after each frame.
 // This synchronizes the content process and the GPU process. We don't want to delay finished frames, so we do this just after
@@ -201,42 +208,41 @@ let gotDemoq3pak0;
 let demoq3pak0Promise = new Promise((resolve) => {
     gotDemoq3pak0 = resolve;
 });
-let generatedArguments = `
-    +set r_mode -2
-    +set fs_game demoq3
-    +set cg_fovGunAdjust 1
-    +set cg_fovAspectAdjust 1
-    +set com_maxfps 0
-    +set r_swapInverval 1
-    +set net_enabled 1
-    +set net_peer_server "wss://peer-server.thelongestyard.link:443"
-    +set r_fullscreen 0
-`;
 
-// broken
-    // +set s_muteWhenUnfocused 1
-    // +set s_muteWhenMinimized 1
+let username = localStorage.getItem('username');
+let model = localStorage.getItem('model');
+if (!username || !model) {
+    username = '';
+    const chars = ['bcdfghjklmnprstvwz', 'aeiou'];
+    for (let i = 0; i < 6; i++)
+        username += chars[i % 2].charAt(Math.random() * chars[i % 2].length | 0);
+    username = username.charAt(0).toUpperCase() + username.slice(1);
+    localStorage.setItem('username', username);
+    const models = ['sarge', 'visor', 'major', 'grunt']; // only these are available in the demo
+    model = models[Math.random() * models.length | 0];
+    localStorage.setItem('model', model);
+}
+
+let generatedArguments = `
+    +set fs_game demoq3
+    +set net_peer_server "${peerServerWebSocket}"
+
+`;
 
 const query = new URLSearchParams(window.location.search);
 let server = query.get('server');
-if (!server) {
-    server = '';
-    const chars = ['bcdfghjklmnprstvwxyz', 'aeiou'];
-    for (let i = 0; i < 8; i++)
-        server += chars[i % 2].charAt(Math.random() * chars[i % 2].length | 0);
-    generatedArguments += `
-        +set net_server_name "${server}"
-        +map q3dm17
-        +set g_spskill 2
-        +set bot_minplayers 2
-        `;
-        //        +set bot_minplayers 4
-
+let decideConnectToServer;
+let connectToServer = new Promise(r=>decideConnectToServer=r);
+if (server) {
+    // sanitize to hopefully avoid command injection in autoexec.cfg
+    server = server.replace(/"/g, '');
+    fetch(`${peerServerHTTP}/lookup/${server}`).then(r=>r.json()).then((r)=>decideConnectToServer(r.found)).catch(()=>{decideConnectToServer(false);});
+} else {
+    server = username;
     const newUrl = new URL(window.location);
     newUrl.searchParams.set('server', server);
-    // window.history.replaceState({}, '', newUrl);
-} else {
-    generatedArguments += `+connect ${server}.humblenet`;
+    window.history.replaceState({}, '', newUrl);
+    decideConnectToServer(false);
 }
 
 
@@ -254,8 +260,9 @@ if (!document.body.requestPointerLock) document.body.requestPointerLock = () => 
 let firstMainLoop = true;
 let shadersCompiled = 0;
 let shadersTotal = 57;
-import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then((ioquake3)=>{
-    ioquake3.default({
+let module = null;
+import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then(async (ioquake3)=>{
+    module = await ioquake3.default({
         canvas: canvas,
         arguments: generatedArguments.trim().split(/\s+/),
         locateFile: (file) => `${buildPath}/${file}`,
@@ -276,7 +283,7 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then((ioquake3)=>{
             }
         },
         printErr: (msg) => {
-            if (msg === '------------ Map Loading ------------') {
+            if (msg === '--- Common Initialization Complete ---') {
                 progress.style.display = 'none';
             }
             console.error(msg);
@@ -290,6 +297,17 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then((ioquake3)=>{
             module.addRunDependency('setup-ioq3-filesystem');
             module.FS.mkdirTree('/demoq3');
             module.FS.writeFile('/demoq3/pak0.pk3', await demoq3pak0Promise);
+            if (await connectToServer) {
+                module.arguments.push(...`
+                    +connect "${server}.humblenet"
+                `.trim().split(/\s+/));
+            } else {
+                module.arguments.push(...`
+                    +set net_server_name "${server}"
+                    +map q3dm17
+                    +set g_spskill 2
+                    `.trim().split(/\s+/));
+            }
             module.FS.writeFile('/demoq3/autoexec.cfg', `
                 set in_joystick 1
                 set in_joystickUseAnalog 1
@@ -332,10 +350,43 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then((ioquake3)=>{
                 set r_picmip 0
                 set r_lodCurveError 10000
                 set r_ignoreGLErrors 1
-            `, { encoding: 'utf8' });
+
+                set r_mode -2
+                set cg_fovGunAdjust 1
+                set cg_fovAspectAdjust 1
+                set com_maxfps 0
+                set r_swapInverval 1
+                set net_enabled 1
+                set r_fullscreen 0
+
+                set sv_fps 60
+                set sv_maxclients 128
+                set snaps 60
+                set cl_maxpackets 125
+
+                set name "${username}"
+                set model "${model}"
+                set headmodel "${model}"
+                    `, { encoding: 'utf8' });
             module.removeRunDependency('setup-ioq3-filesystem');
         }],
     });
+    const runningServer = !await connectToServer;
+    if (runningServer) {
+        // Always run server even in background tabs.
+        // Workers are not subject to setTimeout/setInterval throttling in background tabs and they can postMessage to wake the main thread.
+        // This will render too which is unfortunate but whatever.
+        // Probably doesn't work on mobile. I guess it's fine.
+        const worker = new Worker(URL.createObjectURL(new Blob([`
+            setInterval(() => {
+                self.postMessage('tick');
+            }, 1000 / 60);
+        `], { type: 'application/javascript' })));
+        worker.onmessage = function(e) {
+            if (document.hidden && module && module.Browser && module.Browser.mainLoop)
+                module.Browser.mainLoop.runIter(module.Browser.mainLoop.func);
+        };
+    }
 });
 
 // demoq3/pak0.pk3 is original Quake 3 demo assets. Fetch them from a tarfile in a gz file in a shell script in a zip file at the Internet Archive.
