@@ -357,6 +357,7 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then(async (ioquake3)=>{
                 set r_fullscreen 0
                 set r_ignoreGLErrors 1
                 set cg_fov 90
+                set cg_deferPlayers 0 // load player models when they connect instead of substituting a random model
 
                 set sv_fps 60
                 set sv_maxclients 128
