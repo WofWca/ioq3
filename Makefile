@@ -193,19 +193,19 @@ ifndef USE_CURL_DLOPEN
 endif
 
 ifndef USE_CODEC_VORBIS
-USE_CODEC_VORBIS=1
+USE_CODEC_VORBIS=0
 endif
 
 ifndef USE_CODEC_OPUS
-USE_CODEC_OPUS=1
+USE_CODEC_OPUS=0
 endif
 
 ifndef USE_MUMBLE
-USE_MUMBLE=1
+USE_MUMBLE=0
 endif
 
 ifndef USE_VOIP
-USE_VOIP=1
+USE_VOIP=0
 endif
 
 ifndef USE_FREETYPE
@@ -1096,7 +1096,7 @@ ifeq ($(PLATFORM),emscripten)
   CLIENT_EXTRA_FILES+=code/web/index.html
 
   ifeq ($(BUILD_SERVER),1)
-    CLIENT_EXTRA_FILES+=code/web/server-worker.js code/web/server.html
+    CLIENT_EXTRA_FILES+=code/web/server.html
   endif
 
   CLIENT_CFLAGS+=-s USE_SDL=2
