@@ -1178,7 +1178,7 @@ ifeq ($(PLATFORM),emscripten)
   ifneq ($(BUILD_CLIENT),0)
     TARGETS += $(B)/$(CLIENTBIN).html
     ifneq ($(EMSCRIPTEN_PRELOAD_FILE),1)
-      TARGETS += $(B)/$(CLIENTBIN)-config.json
+      # TARGETS += $(B)/$(CLIENTBIN)-config.json
     endif
 
     ifneq ($(USE_RENDERER_DLOPEN),0)
@@ -1598,6 +1598,10 @@ ifneq ($(TARGETS),)
 	@$(MAKE) $(TARGETS) $(B).zip V=$(V)
   endif
 endif
+
+$(B)/ztm-flexible-hud.pk3: $(B)/$(BASEGAME)/vm/cgame.qvm $(B)/$(BASEGAME)/vm/qagame.qvm $(B)/$(BASEGAME)/vm/ui.qvm
+	@rm -f $@
+	@cd $(B)/$(BASEGAME) && zip -r9 ../ztm-flexible-hud.pk3 vm/*
 
 $(B).zip: $(TARGETS)
 ifeq ($(PLATFORM),darwin)
@@ -2430,6 +2434,10 @@ $(B)/$(CLIENTBIN)_opengl2$(FULLBINEXT): $(Q3OBJ) $(Q3R2OBJ) $(Q3R2STRINGOBJ) $(J
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) $(NOTSHLIBLDFLAGS) \
 		-o $@ $(Q3OBJ) $(Q3R2OBJ) $(Q3R2STRINGOBJ) $(JPGOBJ) \
 		$(LIBSDLMAIN) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)
+endif
+
+ifeq ($(BUILD_GAME_QVM),1)
+  TARGETS += $(B)/ztm-flexible-hud.pk3
 endif
 
 ifneq ($(strip $(LIBSDLMAIN)),)
