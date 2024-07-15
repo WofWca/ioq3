@@ -245,14 +245,10 @@ if (server) {
     decideConnectToServer(false);
 }
 
-
-// +map q3dm17
-// +addbot daemia 2
-// +addbot visor 2
-// +addbot sarge 2
-// +addbot stripe 2
-// +addbot major 2
 const buildPath = '../../build/debug-emscripten-wasm32';
+let gotZtmFlexibleHud;
+const ztmFlexibleHud = new Promise(r=>gotZtmFlexibleHud=r);
+fetch(`${buildPath}/ztm-flexible-hud.pk3`).then(r=>r.arrayBuffer()).then(r=>gotZtmFlexibleHud(new Uint8Array(r)));
 
 // Fool Emscripten into thinking the browser supports pointer lock.
 if (!document.body.requestPointerLock) document.body.requestPointerLock = () => true;
@@ -297,6 +293,7 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then(async (ioquake3)=>{
             module.addRunDependency('setup-ioq3-filesystem');
             module.FS.mkdirTree('/demoq3');
             module.FS.writeFile('/demoq3/pak0.pk3', await demoq3pak0Promise);
+            module.FS.writeFile('/demoq3/ztm-flexible-hud.pk3', await ztmFlexibleHud);
             if (await connectToServer) {
                 module.arguments.push(...`
                     +connect "${server}.humblenet"
@@ -340,16 +337,15 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then(async (ioquake3)=>{
                 bind PAD0_LEFTSTICK_CLICK "+zoom"
                 bind PAD0_RIGHTSTICK_CLICK "+button3"
 
-                set r_ext_texture_filter_anisotropic 1
-                set r_ext_max_anisotropy 16
-                set r_ext_multisample 4
-                set r_ext_framebuffer_multisample 4
-                set r_subdivisions 1
-                set r_lodBias -2
-                set r_textureMode "GL_LINEAR_MIPMAP_LINEAR"
-                set r_picmip 0
-                set r_lodCurveError 10000
-                set r_ignoreGLErrors 1
+                set r_mode -2 // make game use desktop resolution
+                set r_picmip 0 // full texture detail
+                set r_lodBias -2 // don't use lower detail models far away
+                set r_subdivisions 1 // smoother curves
+                set r_textureMode "GL_LINEAR_MIPMAP_LINEAR" // trilinear filter
+                set r_ext_texture_filter_anisotropic 1 // enable anisotropy texture filter
+                set r_ext_max_anisotropy 16 // 16x anisotropy texture filter
+                set r_ext_framebuffer_multisample 4 // use 4x anti-alias (opengl2 renderer)
+                set r_lodCurveError 10000 // smoother curves far away (cheat protected)
 
                 set r_mode -2
                 set cg_fovGunAdjust 1
@@ -358,6 +354,8 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then(async (ioquake3)=>{
                 set r_swapInverval 1
                 set net_enabled 1
                 set r_fullscreen 0
+                set r_ignoreGLErrors 1
+                set cg_fov 90
 
                 set sv_fps 60
                 set sv_maxclients 128

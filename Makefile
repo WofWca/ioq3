@@ -1133,9 +1133,9 @@ ifeq ($(PLATFORM),emscripten)
     CLIENT_LDFLAGS+=--preload-file $(BASEGAME)
     SERVER_LDFLAGS+=--preload-file $(BASEGAME)
     EMSCRIPTEN_PRELOAD_FILE=1
-    CLIENT_EXTRA_FILES+=code/web/empty/ioq3-config.json
+    # CLIENT_EXTRA_FILES+=code/web/empty/ioq3-config.json
   else
-    CLIENT_EXTRA_FILES+=code/web/$(BASEGAME)/ioq3-config.json
+    # CLIENT_EXTRA_FILES+=code/web/$(BASEGAME)/ioq3-config.json
   endif
 
   OPTIMIZEVM = -O3
@@ -1641,8 +1641,7 @@ ifeq ($(PLATFORM),emscripten)
 ifneq ($(EMSCRIPTEN_PRELOAD_FILE),1)
 	@echo "  Warning: Game files not found in '$(BASEGAME)'."
 	@echo "  They will not be packaged by Emscripten or preloaded."
-	@echo "  To run this build you must serve the game files from a web server"
-	@echo "  and list their paths in ioq3-config.json."
+	@echo "  To run this build you must provide an HTML file that loads the game files."
 	@echo "  To make a build that automatically loads the game files, create a"
 	@echo "  directory called '$(BASEGAME)' and copy your game files into it, then"
 	@echo "  'emmake make clean' and rebuild."
@@ -1654,6 +1653,10 @@ ifneq ($(TARGETS),)
 	@$(MAKE) $(TARGETS) $(B).zip V=$(V)
   endif
 endif
+
+$(B)/ztm-flexible-hud.pk3: $(B)/$(BASEGAME)/vm/cgame.qvm $(B)/$(BASEGAME)/vm/qagame.qvm $(B)/$(BASEGAME)/vm/ui.qvm
+	@rm -f $@
+	@cd $(B)/$(BASEGAME) && zip -r9 ../ztm-flexible-hud.pk3 vm/*
 
 $(B).zip: $(TARGETS)
 ifeq ($(PLATFORM),darwin)
@@ -2479,6 +2482,10 @@ $(B)/$(CLIENTBIN)_opengl2$(FULLBINEXT): $(Q3OBJ) $(Q3R2OBJ) $(Q3R2STRINGOBJ) $(J
 	$(Q)$(CC) $(CLIENT_CFLAGS) $(CFLAGS) $(CLIENT_LDFLAGS) $(LDFLAGS) $(NOTSHLIBLDFLAGS) \
 		-o $@ $(Q3OBJ) $(Q3R2OBJ) $(Q3R2STRINGOBJ) $(JPGOBJ) \
 		$(LIBSDLMAIN) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)
+endif
+
+ifeq ($(BUILD_GAME_QVM),1)
+  TARGETS += $(B)/ztm-flexible-hud.pk3
 endif
 
 ifneq ($(strip $(LIBSDLMAIN)),)
