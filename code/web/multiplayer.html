@@ -211,17 +211,17 @@ let demoq3pak0Promise = new Promise((resolve) => {
 
 let username = localStorage.getItem('username');
 let model = localStorage.getItem('model');
-if (!username || !model) {
+// if (!username || !model) {
     username = '';
     const chars = ['bcdfghjklmnprstvwz', 'aeiou'];
     for (let i = 0; i < 6; i++)
         username += chars[i % 2].charAt(Math.random() * chars[i % 2].length | 0);
     username = username.charAt(0).toUpperCase() + username.slice(1);
     localStorage.setItem('username', username);
-    const models = ['sarge', 'visor', 'major', 'grunt']; // only these are available in the demo
+    const models = ['sarge', 'sarge/red', 'sarge/blue', 'sarge/krusade', 'visor', 'visor/red', 'visor/blue', 'major', 'major/red', 'major/blue', 'major/daemia', 'grunt', 'grunt/red', 'grunt/blue', 'grunt/stripe']; // only these are available in the demo
     model = models[Math.random() * models.length | 0];
     localStorage.setItem('model', model);
-}
+// }
 
 let generatedArguments = `
     +set fs_game demoq3
@@ -371,8 +371,7 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then(async (ioquake3)=>{
             module.removeRunDependency('setup-ioq3-filesystem');
         }],
     });
-    const runningServer = !await connectToServer;
-    if (runningServer) {
+    if (true /* is multiplayer */) {
         // Always run server even in background tabs.
         // Workers are not subject to setTimeout/setInterval throttling in background tabs and they can postMessage to wake the main thread.
         // This will render too which is unfortunate but whatever.
