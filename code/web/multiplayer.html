@@ -344,7 +344,8 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then(async (ioquake3)=>{
                 set r_textureMode "GL_LINEAR_MIPMAP_LINEAR" // trilinear filter
                 set r_ext_texture_filter_anisotropic 1 // enable anisotropy texture filter
                 set r_ext_max_anisotropy 16 // 16x anisotropy texture filter
-                set r_ext_framebuffer_multisample 4 // use 4x anti-alias (opengl2 renderer)
+                set r_ext_multisample 16 // use multisample antialiasing
+                set r_ext_framebuffer_multisample 16 // use multisample antialiasing
                 set r_lodCurveError 10000 // smoother curves far away (cheat protected)
 
                 set r_mode -2
