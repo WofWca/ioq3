@@ -1001,6 +1001,9 @@ ifeq ($(PLATFORM),emscripten)
   USE_HUMBLENET=1
   BUILD_SERVER=1
 
+#   CLIENT_EXTRA_FILES+=code/web/index.html code/web/GamepadEmulator.js code/web/compression-streams-polyfill.0.1.7.js
+  CLIENT_EXTRA_FILES+=code/web/GamepadEmulator.js code/web/compression-streams-polyfill.0.1.7.js
+
   ifeq ($(BUILD_SERVER),1)
     CLIENT_EXTRA_FILES+=code/web/server.html
   endif
@@ -1170,6 +1173,7 @@ endif
 ifeq ($(PLATFORM),emscripten)
   ifneq ($(BUILD_SERVER),0)
     GENERATEDTARGETS += $(B)/$(SERVERBIN).$(ARCH).wasm
+    GENERATEDTARGETS+=$(B)/ztm-flexible-hud.pk3
     ifeq ($(EMSCRIPTEN_PRELOAD_FILE),1)
       GENERATEDTARGETS += $(B)/$(SERVERBIN).$(ARCH).data
     endif
@@ -1599,9 +1603,11 @@ ifneq ($(TARGETS),)
   endif
 endif
 
-$(B)/ztm-flexible-hud.pk3: $(B)/$(BASEGAME)/vm/cgame.qvm $(B)/$(BASEGAME)/vm/qagame.qvm $(B)/$(BASEGAME)/vm/ui.qvm
+$(B)/ztm-flexible-hud.pk3: $(B)/$(BASEGAME)/vm/cgame.qvm $(B)/$(BASEGAME)/vm/qagame.qvm $(B)/$(BASEGAME)/vm/ui.qvm code/game/inv.h
 	@rm -f $@
-	@cd $(B)/$(BASEGAME) && zip -r9 ../ztm-flexible-hud.pk3 vm/*
+	@mkdir -p $(B)/$(BASEGAME)/botfiles
+	@cp code/game/inv.h $(B)/$(BASEGAME)/botfiles/inv.h
+	@cd $(B)/$(BASEGAME) && zip -r9 ../ztm-flexible-hud.pk3 vm/* botfiles/*
 
 $(B).zip: $(TARGETS)
 ifeq ($(PLATFORM),darwin)

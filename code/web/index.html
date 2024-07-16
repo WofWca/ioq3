@@ -1,7 +1,13 @@
 <!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quake III Arena Demo</title>
 <style>
-html, body { margin: 0; padding: 0; overflow: hidden; background: rgb(0, 0, 0);}
+html, body { margin: 0; padding: 0; overflow: hidden; background: rgb(0, 0, 0);
+    font-family: "Antonio", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 700;
+    font-style: normal;
+    letter-spacing: -.05ch;
+}
 canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; object-fit: contain; }
 #progress { position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin: auto; width: 80%; height: 4em; background: black; border: .5em solid white; padding: .5em; }
 #blocker { 
@@ -14,6 +20,72 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
     color: white; 
     display: flex; 
 }
+#ui {
+    padding: 1em;
+    position: absolute;
+    right: 0;
+    top: 0;
+    background: transparent;
+    color: rgb(197, 0, 0);
+    transform-origin: top right;
+    transform: scale(4) scaleY(0.6);
+    user-select: none;
+}
+
+.button::before,
+.button::after {
+    content:attr(title);
+    display:block;
+    position:absolute;
+    top:0;
+    left:0;
+    bottom:0;
+    right:0;
+    padding: .2em
+}
+
+.button::before {
+    color: rgb(200, 0, 0);
+    text-shadow: .5px .5px .5px rgba(0, 0, 0, 1);
+}
+
+.selected::after, .button:hover::after {
+    animation: blink .5s infinite;
+    animation-timing-function: ease-in-out;
+    color: rgb(255,0,0);
+    text-shadow: 0 0 1px rgba(255, 0, 0, 1);
+}
+
+#ui:hover .selected:not(:hover)::after {
+    animation: none;
+    text-shadow: none;
+}
+.button {
+    position: relative;
+    font-family: "Antonio", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 700;
+    font-style: normal;
+    padding: .2em;
+    font-weight: bold;
+    color: transparent;
+    background: transparent;
+    text-align: center;
+}
+
+@keyframes blink {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0;
+    }
+}
+
+/* .button:hover {
+    color: rgb(255, 0, 0);
+    text-shadow: 0 0 5px rgba(255, 0, 0, 0.8), 0 0 10px rgba(255, 0, 0, 0.6), 0 0 15px rgba(255, 0, 0, 0.4), 4px 5px  rgba(0, 0, 0, 1);
+} */
 
 #move, #look {
     flex: 1;
@@ -55,7 +127,14 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
 @media (pointer: coarse) {
     #blocker * { display: block; }
 }
+@media (display-mode: fullscreen) {
+    #ui { display: none; }
+}
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Antonio:wght@100..700&display=swap" rel="stylesheet">
+
 <body>
 <div id=rotator>
 
@@ -66,6 +145,7 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
     <div id="move"></div>
     <div id="look"></div>
 </div>
+<div id="ui"><div id="singlePlayerButton" class="button selected" title="SINGLE PLAYER">SINGLE PLAYER</div><div class="button" id="multiplayerButton" title="MULTIPLAYER">MULTIPLAYER</div></div>
 </div>
 <div id=progress><div id=done></div></div>
 </body>
@@ -190,9 +270,9 @@ look.addEventListener('pointercancel', (e) => {
 document.addEventListener('pointerlockchange', ()=>{if (document.pointerLockElement && !document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen()});
 document.addEventListener('fullscreenchange', () => { if (!document.pointerLockElement && canvas.requestPointerLock) canvas.requestPointerLock({ unadjustedMovement: true }); });
 const fullscreenAndPointerLock = async () => { if (!document.pointerLockElement && canvas.requestPointerLock) canvas.requestPointerLock({ unadjustedMovement: true }); if (!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); };
-window.addEventListener('keydown', fullscreenAndPointerLock, { capture: true });
-window.addEventListener('touchend', fullscreenAndPointerLock, { capture: true });
-window.addEventListener('mousedown', fullscreenAndPointerLock, { capture: true });
+blocker.addEventListener('keydown', fullscreenAndPointerLock, { capture: true });
+blocker.addEventListener('touchend', fullscreenAndPointerLock, { capture: true });
+blocker.addEventListener('mousedown', fullscreenAndPointerLock, { capture: true });
 blocker.addEventListener('touchmove', (e) => e.preventDefault() ); // required for touchend to fire if the touch moves
 
 
@@ -218,7 +298,7 @@ if (!username || !model) {
         username += chars[i % 2].charAt(Math.random() * chars[i % 2].length | 0);
     username = username.charAt(0).toUpperCase() + username.slice(1);
     localStorage.setItem('username', username);
-    const models = ['sarge', 'sarge/krusade', 'visor', 'major', 'major/daemia', 'grunt', 'grunt/stripe']; // only these are available in the demo, plus red/blue versions but those wouldn't be fair
+    const models = ['sarge', 'visor', 'major', 'major/daemia', 'major', 'major/daemia', 'grunt', 'grunt/stripe']; // only these are available in the demo, plus red/blue versions but those wouldn't be fair
     model = models[Math.random() * models.length | 0];
     localStorage.setItem('model', model);
 }
@@ -231,21 +311,57 @@ let generatedArguments = `
 
 const query = new URLSearchParams(window.location.search);
 let server = query.get('server');
+let multiplayer = !!server;
+if (multiplayer) {
+    multiplayerButton.classList.add('selected');
+    singlePlayerButton.classList.remove('selected');
+} else {
+    singlePlayerButton.classList.add('selected');
+    multiplayerButton.classList.remove('selected');
+}
+
 let decideConnectToServer;
 let connectToServer = new Promise(r=>decideConnectToServer=r);
 if (server) {
     // sanitize to hopefully avoid command injection in autoexec.cfg
     server = server.replace(/"/g, '');
     fetch(`${peerServerHTTP}/lookup/${server}`).then(r=>r.json()).then((r)=>decideConnectToServer(r.found)).catch(()=>{decideConnectToServer(false);});
-} else {
-    server = username;
-    const newUrl = new URL(window.location);
-    newUrl.searchParams.set('server', server);
-    window.history.replaceState({}, '', newUrl);
-    decideConnectToServer(false);
 }
 
-const buildPath = '../../build/debug-emscripten-wasm32';
+let finishedPreRun = false;
+multiplayerButton.onclick = () => {
+    if (!multiplayer) {
+        multiplayer = true;
+        multiplayerButton.classList.add('selected');
+        singlePlayerButton.classList.remove('selected');
+        if (finishedPreRun) {
+            server = username;
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('server', server);
+            window.location = newUrl;
+        } else {
+            decideConnectToServer(false);
+        }
+    }
+};
+
+singlePlayerButton.onclick = () => {
+    if (multiplayer) {
+        multiplayer = false;
+        multiplayerButton.classList.remove('selected');
+        singlePlayerButton.classList.add('selected');
+        if (finishedPreRun) {
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('server');
+            window.location = newUrl;
+        }
+    }
+};
+
+let buildPath = '.';
+if (location.pathname.startsWith('/ioq3/code/web/')) {
+    buildPath = '../../build/debug-emscripten-wasm32';
+}
 let gotZtmFlexibleHud;
 const ztmFlexibleHud = new Promise(r=>gotZtmFlexibleHud=r);
 fetch(`${buildPath}/ztm-flexible-hud.pk3`).then(r=>r.arrayBuffer()).then(r=>gotZtmFlexibleHud(new Uint8Array(r)));
@@ -294,16 +410,29 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then(async (ioquake3)=>{
             module.FS.mkdirTree('/demoq3');
             module.FS.writeFile('/demoq3/pak0.pk3', await demoq3pak0Promise);
             module.FS.writeFile('/demoq3/ztm-flexible-hud.pk3', await ztmFlexibleHud);
-            if (await connectToServer) {
-                module.arguments.push(...`
-                    +connect "${server}.humblenet"
-                `.trim().split(/\s+/));
+            if (multiplayer) {
+                if (await connectToServer) {
+                    module.arguments.push(...`
+                        +connect "${server}.humblenet"
+                    `.trim().split(/\s+/));
+                } else {
+                    module.arguments.push(...`
+                        +set net_server_name "${server}"
+                        +map q3dm17
+                        +set g_spskill 2
+                        `.trim().split(/\s+/));
+                }
             } else {
                 module.arguments.push(...`
-                    +set net_server_name "${server}"
-                    +map q3dm17
                     +set g_spskill 2
-                    `.trim().split(/\s+/));
+                    +map q3dm17
+                    +addbot sarge
+                    +addbot daemia
+                    +addbot major
+                    +addbot visor
+                    +addbot stripe
+                    +addbot grunt
+                `.trim().split(/\s+/));
             }
             module.FS.writeFile('/demoq3/autoexec.cfg', `
                 set in_joystick 1
@@ -369,10 +498,11 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then(async (ioquake3)=>{
                 set model "${model}"
                 set headmodel "${model}"
                     `, { encoding: 'utf8' });
+            finishedPreRun = true;
             module.removeRunDependency('setup-ioq3-filesystem');
         }],
     });
-    if (true /* is multiplayer */) {
+    if (multiplayer) {
         // Always run server even in background tabs.
         // Workers are not subject to setTimeout/setInterval throttling in background tabs and they can postMessage to wake the main thread.
         // This will render too which is unfortunate but whatever.
