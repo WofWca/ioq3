@@ -153,9 +153,9 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
 <script type='module'>
 
 let peerServer = 's://peer-server.thelongestyard.link';
-if (location.hostname === 'localhost') {
-    peerServer = '://localhost:8080';
-}
+// if (location.hostname === 'localhost') {
+//     peerServer = '://localhost:8080';
+// }
 const peerServerWebSocket = `ws${peerServer}`;
 const peerServerHTTP = `http${peerServer}`;
 

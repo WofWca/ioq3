@@ -294,6 +294,7 @@ void internal_register_protocol( internal_context_t*, const char* protocol, inte
 
 internal_socket_t* internal_connect_websocket( const char* addr, const char* protocol );
 void internal_set_stun_servers( internal_context_t*, const char** servers, int count);
+void internal_add_turn_server( internal_context_t*, const char* server, const char* username, const char* password);
 internal_socket_t* internal_create_webrtc(internal_context_t *);
 int internal_create_offer( internal_socket_t* socket );
 int internal_set_offer( internal_socket_t* socket, const char* offer );
@@ -6098,10 +6099,11 @@ static ha_bool p2pSignalProcess(const humblenet::HumblePeer::Message *msg, void 
 			for (auto& it : humbleNetState.iceServers) {
 				if (it.type == HumblePeer::ICEServerType::STUNServer) {
 					stunServers.emplace_back(it.server.c_str());
+				} else if (it.type == HumblePeer::ICEServerType::TURNServer) {
+					internal_add_turn_server( humbleNetState.context, it.server.c_str(), it.username.c_str(), it.password.c_str() );
 				}
 			}
 			internal_set_stun_servers(humbleNetState.context, stunServers.data(), stunServers.size());
-			//            internal_set_turn_server( server.c_str(), username.c_str(), password.c_str() );
 		}
 			break;
 
@@ -7015,6 +7017,7 @@ struct libwebrtc_context* libwebrtc_create_context( lwrtc_callback_function );
 void libwebrtc_destroy_context( struct libwebrtc_context* );
 
 void libwebrtc_set_stun_servers( struct libwebrtc_context* ctx, const char** servers, int count);
+void libwebrtc_add_turn_server( struct libwebrtc_context* ctx, const char* server, const char* username, const char* password);
 
 struct libwebrtc_connection* libwebrtc_create_connection_extended( struct libwebrtc_context*, void* user_data );
 struct libwebrtc_data_channel* libwebrtc_create_channel( struct libwebrtc_connection* conn, const char* name );
@@ -7348,6 +7351,13 @@ void internal_set_stun_servers( internal_context_t* ctx, const char** servers, i
 		ctx->stunServerList.push_back( *servers );
 		servers++;
 	}
+}
+
+void internal_add_turn_server( internal_context_t* ctx, const char* server, const char* username, const char* password ) {
+	libwebrtc_add_turn_server( ctx->webrtc, server, username, password );
+	ctx->turnServer = server;
+	ctx->turnUsername = username;
+	ctx->turnPassword = password;
 }
 
 void internal_set_callbacks(internal_socket_t* socket, internal_callbacks_t* callbacks ) {
@@ -7799,7 +7809,7 @@ void libwebrtc_destroy_context(struct libwebrtc_context* ctx)
 void libwebrtc_set_stun_servers( struct libwebrtc_context* ctx, const char** servers, int count)
 {
 	EM_ASM({
-		Module.__libwebrtc.options.iceServers = [];
+		Module.__libwebrtc.options.iceServers = Module.__libwebrtc.options.iceServers || [];
 	});
 
 	for( int i = 0; i < count; ++i ) {
@@ -7810,6 +7820,17 @@ void libwebrtc_set_stun_servers( struct libwebrtc_context* ctx, const char** ser
 		}, *servers);
 		servers++;
 	}
+}
+
+void libwebrtc_add_turn_server( struct libwebrtc_context* ctx, const char* server, const char* username, const char* password) {
+	EM_ASM({
+		Module.__libwebrtc.options.iceServers = Module.__libwebrtc.options.iceServers || [];
+		Module.__libwebrtc.options.iceServers.push({
+			urls: "turn:" + UTF8ToString($0),
+			username: UTF8ToString($1),
+			credential: UTF8ToString($2)
+		});
+	}, server, username, password);
 }
 
 struct libwebrtc_connection* libwebrtc_create_connection_extended(struct libwebrtc_context* ctx, void* user_data) {
