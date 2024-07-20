@@ -127,9 +127,6 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
 @media (pointer: coarse) {
     #blocker * { display: block; }
 }
-@media (display-mode: fullscreen) {
-    #ui { display: none; }
-}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -145,7 +142,10 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
     <div id="move"></div>
     <div id="look"></div>
 </div>
-<div id="ui"><div id="singlePlayerButton" class="button selected" title="SINGLE PLAYER">SINGLE PLAYER</div><div class="button" id="multiplayerButton" title="MULTIPLAYER">MULTIPLAYER</div></div>
+<div id="ui">
+    <div id="singlePlayerButton" class="button selected" title="SINGLE PLAYER">SINGLE PLAYER</div><div class="button" id="multiplayerButton" title="MULTIPLAYER">MULTIPLAYER</div>
+    <div id=multiplayerMessage class="button" style=display:none title="COPY MULTIPLAYER URL">COPY MULTIPLAYER URL</div>
+</div>
 </div>
 <div id=progress><div id=done></div></div>
 </body>
@@ -266,13 +266,29 @@ look.addEventListener('pointercancel', (e) => {
     }
 }, { passive: false });
 
+const originalRequestPointerLock = HTMLElement.prototype.requestPointerLock;
+HTMLElement.prototype.originalRequestPointerLock = originalRequestPointerLock;
+
+// Block Emscripten from automatically calling requestPointerLock when we don't want it to.
+HTMLElement.prototype.requestPointerLock = function(options) {
+    console.log('Intercepted requestPointerLock call');
+};
+
+
 
 document.addEventListener('pointerlockchange', ()=>{if (document.pointerLockElement && !document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen()});
-document.addEventListener('fullscreenchange', () => { if (!document.pointerLockElement && canvas.requestPointerLock) canvas.requestPointerLock({ unadjustedMovement: true }); });
-const fullscreenAndPointerLock = async () => { if (!document.pointerLockElement && canvas.requestPointerLock) canvas.requestPointerLock({ unadjustedMovement: true }); if (!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); };
-blocker.addEventListener('keydown', fullscreenAndPointerLock, { capture: true });
-blocker.addEventListener('touchend', fullscreenAndPointerLock, { capture: true });
-blocker.addEventListener('mousedown', fullscreenAndPointerLock, { capture: true });
+document.addEventListener('fullscreenchange', () => {
+    if (document.fullscreenElement && !document.pointerLockElement && canvas.originalRequestPointerLock) canvas.originalRequestPointerLock({ unadjustedMovement: true });
+    ui.style.visibility = document.fullscreenElement ? 'hidden' : 'visible';
+});
+const fullscreenAndPointerLock = async (e) => {
+    if (ui.contains(e.target)) return;
+    if (!document.pointerLockElement && canvas.originalRequestPointerLock) canvas.originalRequestPointerLock({ unadjustedMovement: true });
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+};
+blocker.addEventListener('keydown', fullscreenAndPointerLock);
+blocker.addEventListener('touchend', fullscreenAndPointerLock);
+blocker.addEventListener('mousedown', fullscreenAndPointerLock);
 blocker.addEventListener('touchmove', (e) => e.preventDefault() ); // required for touchend to fire if the touch moves
 
 
@@ -315,10 +331,18 @@ let multiplayer = !!server;
 if (multiplayer) {
     multiplayerButton.classList.add('selected');
     singlePlayerButton.classList.remove('selected');
+    multiplayerMessage.style.display = 'block';
 } else {
     singlePlayerButton.classList.add('selected');
     multiplayerButton.classList.remove('selected');
 }
+multiplayerMessage.addEventListener('click', (e) => {
+    navigator.clipboard.writeText(window.location.href);
+    multiplayerMessage.innerText = `COPIED! SEND TO YOUR FRIENDS!`;
+    multiplayerMessage.title = multiplayerMessage.innerText;
+    e.preventDefault();
+    e.stopPropagation();
+}, { capture: true} );
 
 let decideConnectToServer;
 let connectToServer = new Promise(r=>decideConnectToServer=r);
@@ -334,11 +358,13 @@ multiplayerButton.onclick = () => {
         multiplayer = true;
         multiplayerButton.classList.add('selected');
         singlePlayerButton.classList.remove('selected');
+        multiplayerMessage.style.display = 'block';
+        server = username;
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.set('server', server);
+        window.history.replaceState({}, '', newUrl);
         if (finishedPreRun) {
-            server = username;
-            const newUrl = new URL(window.location);
-            newUrl.searchParams.set('server', server);
-            window.location = newUrl;
+            window.location.reload();
         } else {
             decideConnectToServer(false);
         }
