@@ -4621,7 +4621,8 @@ int on_ice_candidate( internal_socket_t* s, const char* offer, void* user_data )
 		return -1;
 	}
 
-	assert( conn->status == HUMBLENET_CONNECTION_CONNECTING );
+	// This is OK with trickle ICE
+	// assert( conn->status == HUMBLENET_CONNECTION_CONNECTING );
 
 	LOG("Sending ice candidate to peer: %u, %s\n", conn->otherPeer, offer );
 	if( ! sendICECandidate(humbleNetState.p2pConn.get(), conn->otherPeer, offer) ) {
@@ -7554,56 +7555,8 @@ struct libwebrtc_context* libwebrtc_create_context( lwrtc_callback_function call
 	bool supported = EM_ASM_INT({
 		var libwebrtc = {};
 
-		libwebrtc.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.msRTCConnection || window.webkitRTCPeerConnection;
-		libwebrtc.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate || window.msRTCIceCandidate || window.webkitRTCIceCandidate;
-		libwebrtc.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription || window.msRTCSessionDescription || window.webkitRTCSessionDescription;
-
-		if( ! libwebrtc.RTCPeerConnection || ! libwebrtc.RTCIceCandidate || ! libwebrtc.RTCSessionDescription )
+		if( ! self.RTCPeerConnection || ! self.RTCIceCandidate || ! self.RTCSessionDescription )
 			return 0;
-
-		'createOffer createAnswer'.split(' ').forEach(function(method){
-			var native = libwebrtc.RTCPeerConnection.prototype[method];
-			if( native.length == 0 )
-			   return;
-
-			Module.out("Adding promise support to: " + method );
-
-			libwebrtc.RTCPeerConnection.prototype[method] = function() {
-				var self = this;
-
-				if( arguments.length == 0 || ( arguments.length == 1 && typeof(arguments[0]) === 'object' ) ) {
-					 var opts = arguments.length === 1 ? arguments[0] : undefined;
-					 return new Promise(function(resolve,reject){
-						  native.apply(self, [resolve,reject,opts]);
-					 });
-				} else {
-					return native.apply(this,arguments);
-				}
-			};
-		});
-
-		var is_firefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
-
-		'setLocalDescription setRemoteDescription addIceCandidate'.split(' ').forEach(function(method) {
-			var native = libwebrtc.RTCPeerConnection.prototype[method];
-			if( is_firefox ) {
-				return;
-			}
-
-			Module.out("Adding promise support to: " + method );
-
-			libwebrtc.RTCPeerConnection.prototype[method] = function() {
-				var self = this;
-				var opts = arguments.length === 1 ? arguments[0] : undefined;
-				if( arguments.length > 1 ) {
-					return native.apply( this, arguments );
-				} else {
-					return new Promise( function(resolve,reject) {
-						native.apply(self, [opts, resolve, reject]);
-					});
-				}
-			};
-		});
 
 		var ctx = $0;
 		libwebrtc.connections = new Map();
@@ -7612,7 +7565,7 @@ struct libwebrtc_context* libwebrtc_create_context( lwrtc_callback_function call
 		libwebrtc.options = {};
 
 		libwebrtc.create = function() {
-			var connection = new this.RTCPeerConnection(this.options,null);
+			var connection = new RTCPeerConnection(this.options,null);
 
 			connection.trickle = true;
 
@@ -7864,7 +7817,7 @@ int libwebrtc_create_offer( struct libwebrtc_connection* connection ) {
 
 		connection.createOffer({})
 			.then(function(offer){
-				connection.setLocalDescription( new Module.__libwebrtc.RTCSessionDescription( offer ) )
+				connection.setLocalDescription( new RTCSessionDescription( offer ) )
 					.then( function() {
 						Module.__libwebrtc.on_sdp.call( connection );
 					}).catch(function(error){
@@ -7889,11 +7842,11 @@ int libwebrtc_set_offer( struct libwebrtc_connection* connection, const char* sd
 		offer.type = 'offer';
 		offer.sdp = UTF8ToString( $1 );
 
-		connection.setRemoteDescription( new Module.__libwebrtc.RTCSessionDescription( offer ) )
+		connection.setRemoteDescription( new RTCSessionDescription( offer ) )
 			.then(function() {
 				connection.createAnswer()
 					.then(function(offer){
-						connection.setLocalDescription( new Module.__libwebrtc.RTCSessionDescription( offer ) )
+						connection.setLocalDescription( new RTCSessionDescription( offer ) )
 							.then( function() {
 								Module.__libwebrtc.on_sdp.call( connection );
 							}).catch(function(error){
@@ -7920,7 +7873,7 @@ int libwebrtc_set_answer( struct libwebrtc_connection* connection, const char* s
 		offer.type = 'answer';
 		offer.sdp = UTF8ToString( $1 );
 
-		connection.setRemoteDescription( new Module.__libwebrtc.RTCSessionDescription( offer ) )
+		connection.setRemoteDescription( new RTCSessionDescription( offer ) )
 			.then( function() {
 				// nothing, as this is the answer to our offer
 			}).catch(function(error){
@@ -7945,7 +7898,7 @@ int libwebrtc_add_ice_candidate( struct libwebrtc_connection* connection, const 
 		   // FF workaround
 		   || connection.iceConnectionState == 'new') {
 			Module.out( "AddIce: " + options.candidate );
-			connection.addIceCandidate( new Module.__libwebrtc.RTCIceCandidate( options ) );
+			connection.addIceCandidate( new RTCIceCandidate( options ) );
 		} else {
 			Module.out( "Not negotiating (" + connection.iceConnectionState + "), ignored candidate: " + options.candidate );
 		}
