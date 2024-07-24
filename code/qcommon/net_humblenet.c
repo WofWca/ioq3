@@ -70,9 +70,9 @@ void HUMBLENET_Init (void)
 	
 #ifdef EMSCRIPTEN
 	
-	// on emscripten this is supposed to be specified by the server
+	// on emscripten this is supposed to be specified on command line
 	// don't save to config
-	int net_peer_server_flags = CVAR_ARCHIVE;
+	int net_peer_server_flags = CVAR_INIT;
 	
 #else  // EMSCRIPTEN
 	

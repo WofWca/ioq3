@@ -23,11 +23,11 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
 #ui {
     padding: 1em;
     position: absolute;
-    right: 0;
-    top: 0;
+    left: 0;
+    bottom: 0;
     background: transparent;
     color: rgb(197, 0, 0);
-    transform-origin: top right;
+    transform-origin: bottom left;
     transform: scale(4) scaleY(0.6);
     user-select: none;
 }
@@ -143,8 +143,7 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
     <div id="look"></div>
 </div>
 <div id="ui">
-    <div id="singlePlayerButton" class="button selected" title="SINGLE PLAYER">SINGLE PLAYER</div><div class="button" id="multiplayerButton" title="MULTIPLAYER">MULTIPLAYER</div>
-    <div id=multiplayerMessage class="button" style=display:none title="COPY MULTIPLAYER URL">COPY MULTIPLAYER URL</div>
+    <div id=multiplayerMessage class="button selected" style=display:none title="COPY MULTIPLAYER URL">COPY MULTIPLAYER URL</div>
 </div>
 </div>
 <div id=progress><div id=done></div></div>
@@ -276,8 +275,10 @@ HTMLElement.prototype.requestPointerLock = function(options) {
 
 
 
+let saveFiles = null;
 document.addEventListener('pointerlockchange', ()=>{if (document.pointerLockElement && !document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen()});
 document.addEventListener('fullscreenchange', () => {
+    if (saveFiles) saveFiles();
     if (document.fullscreenElement && !document.pointerLockElement && canvas.originalRequestPointerLock) canvas.originalRequestPointerLock({ unadjustedMovement: true });
     ui.style.visibility = document.fullscreenElement ? 'hidden' : 'visible';
 });
@@ -321,25 +322,28 @@ if (!username || !model) {
 
 let generatedArguments = `
     +set fs_game demoq3
-    +set net_peer_server "${peerServerWebSocket}"
-
 `;
 
 const query = new URLSearchParams(window.location.search);
 let server = query.get('server');
-let multiplayer = !!server;
-if (multiplayer) {
-    multiplayerButton.classList.add('selected');
-    singlePlayerButton.classList.remove('selected');
-    multiplayerMessage.style.display = 'block';
-} else {
-    singlePlayerButton.classList.add('selected');
-    multiplayerButton.classList.remove('selected');
+if (query.has('multiplayer')) {
+    if (!server) server = username;
+    let newUrl = new URL(window.location);
+    newUrl.searchParams.delete('multiplayer');
+    newUrl.searchParams.set('server', server);
+    history.replaceState(null, '', newUrl);
 }
+
+let multiplayer = !!server;
+if (multiplayer) multiplayerMessage.style.display = 'block';
 multiplayerMessage.addEventListener('click', (e) => {
     navigator.clipboard.writeText(window.location.href);
     multiplayerMessage.innerText = `COPIED! SEND TO YOUR FRIENDS!`;
     multiplayerMessage.title = multiplayerMessage.innerText;
+    setTimeout(() => {
+        multiplayerMessage.innerText = `COPY MULTIPLAYER URL`;
+        multiplayerMessage.title = multiplayerMessage.innerText;
+    }, 5000);
     e.preventDefault();
     e.stopPropagation();
 }, { capture: true} );
@@ -351,38 +355,6 @@ if (server) {
     server = server.replace(/"/g, '');
     fetch(`${peerServerHTTP}/lookup/${server}`).then(r=>r.json()).then((r)=>decideConnectToServer(r.found)).catch(()=>{decideConnectToServer(false);});
 }
-
-let finishedPreRun = false;
-multiplayerButton.onclick = () => {
-    if (!multiplayer) {
-        multiplayer = true;
-        multiplayerButton.classList.add('selected');
-        singlePlayerButton.classList.remove('selected');
-        multiplayerMessage.style.display = 'block';
-        server = username;
-        const newUrl = new URL(window.location);
-        newUrl.searchParams.set('server', server);
-        window.history.replaceState({}, '', newUrl);
-        if (finishedPreRun) {
-            window.location.reload();
-        } else {
-            decideConnectToServer(false);
-        }
-    }
-};
-
-singlePlayerButton.onclick = () => {
-    if (multiplayer) {
-        multiplayer = false;
-        multiplayerButton.classList.remove('selected');
-        singlePlayerButton.classList.add('selected');
-        if (finishedPreRun) {
-            const newUrl = new URL(window.location);
-            newUrl.searchParams.delete('server');
-            window.location = newUrl;
-        }
-    }
-};
 
 let buildPath = '.';
 if (location.pathname.startsWith('/ioq3/code/web/')) {
@@ -433,19 +405,57 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then(async (ioquake3)=>{
             });
             // Add the fetched asset files to the Emscripten virtual filesystem.
             module.addRunDependency('setup-ioq3-filesystem');
+            module.FS.mkdirTree('/home/web_user/.q3a');
+            module.FS.mount(module.FS.filesystems.IDBFS, {}, '/home/web_user/.q3a');
+            let idbfsReadyResolve = null;
+            const idbfsReady = new Promise(r=>idbfsReadyResolve=r);
+            module.FS.syncfs(true, (err) => {
+                if (err) { console.error(err); debugger; }
+                idbfsReadyResolve();
+            });
+            await idbfsReady;
+            try {
+                if(!module.FS.analyzePath('/home/web_user/.q3a/demoq3/q3config.cfg').exists) {
+                    module.arguments.push(...`
+                        +set model "${model}"
+                        +set headmodel "${model}"
+                        +set name "${username}"
+                        `.trim().split(/\s+/));
+                } else {
+                    // Read the existing q3config.cfg and update the name and model in case the user changed them.
+                    const q3config = module.FS.readFile('/home/web_user/.q3a/demoq3/q3config.cfg', { encoding: 'utf8' });
+                    const lines = q3config.split('\n');
+                    for (let i = 0; i < lines.length; i++) {
+                        if (lines[i].startsWith('seta name')) {
+                            localStorage.setItem('username', lines[i].split('"')[1]);
+                        } else if (lines[i].startsWith('seta model') || lines[i].startsWith('seta headmodel')) {
+                            localStorage.setItem('model', lines[i].split('"')[1]);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Error reading q3config.cfg:', err);
+            }
+            saveFiles = () => {
+                module.FS.syncfs(false, (err) => {
+                    if (err) { console.error(err); debugger; }
+                });
+            };
+            saveFiles();
             module.FS.mkdirTree('/demoq3');
             module.FS.writeFile('/demoq3/pak0.pk3', await demoq3pak0Promise);
             module.FS.writeFile('/demoq3/ztm-flexible-hud.pk3', await ztmFlexibleHud);
             if (multiplayer) {
                 if (await connectToServer) {
                     module.arguments.push(...`
+                        +set net_peer_server "${peerServerWebSocket}"
                         +connect "${server}.humblenet"
                     `.trim().split(/\s+/));
                 } else {
                     module.arguments.push(...`
+                        +set net_peer_server "${peerServerWebSocket}"
                         +set net_server_name "${server}"
                         +map q3dm17
-                        +set g_spskill 2
                         `.trim().split(/\s+/));
                 }
             } else {
@@ -520,11 +530,7 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then(async (ioquake3)=>{
                 set cl_maxpackets 125
                 set sv_pure 1
 
-                set name "${username}"
-                set model "${model}"
-                set headmodel "${model}"
                     `, { encoding: 'utf8' });
-            finishedPreRun = true;
             module.removeRunDependency('setup-ioq3-filesystem');
         }],
     });

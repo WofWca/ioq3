@@ -1018,7 +1018,7 @@ ifeq ($(PLATFORM),emscripten)
 
   # The HTML file can use these functions to load extra files before the game starts.
   CLIENT_LDFLAGS+=-s EXPORTED_RUNTIME_METHODS=FS,addRunDependency,removeRunDependency,cwrap,stackAlloc,out,AL,Browser
-  # CLIENT_LDFLAGS+=-s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE='["$$stackAlloc"]'
+  CLIENT_LDFLAGS+= -lidbfs.js
   CLIENT_LDFLAGS+=-s EXIT_RUNTIME=1
   CLIENT_LDFLAGS+=-s EXPORT_ES6
   CLIENT_LDFLAGS+=-s EXPORT_NAME=ioquake3
