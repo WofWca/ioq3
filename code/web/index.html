@@ -400,8 +400,17 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then(async (ioquake3)=>{
         },
         preRun: [async (module) => {
             document.addEventListener('visibilitychange', () => {
-                if (document.hidden) for (const c of Object.values(module.AL.contexts)) c.audioCtx.suspend();
-                else for (const c of Object.values(module.AL.contexts)) c.audioCtx.resume();
+                // Silence audio when the tab is hidden.
+                if (document.hidden) {
+                    for (const c of Object.values(module.AL.contexts)) {
+                        c.gain.gain.linearRampToValueAtTime(0, c.audioCtx.currentTime + 0.1);
+                    }
+                } else {
+                    for (const c of Object.values(module.AL.contexts)) {
+                        c.gain.gain.setValueAtTime(0.00001, c.audioCtx.currentTime);
+                        c.gain.gain.exponentialRampToValueAtTime(1, c.audioCtx.currentTime + 1);
+                    }
+                }
             });
             // Add the fetched asset files to the Emscripten virtual filesystem.
             module.addRunDependency('setup-ioq3-filesystem');
