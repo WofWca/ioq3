@@ -7480,8 +7480,6 @@ int on_data( internal_socket_t* s, const void* data, int len, void* user_data ) 
 
 	assert( conn->status == HUMBLENET_CONNECTION_CONNECTED );
 
-	LOG("on_data: Received %d from peer %u\n", len, conn->otherPeer);
-
 	if( conn->recvBuffer.empty() ) {
 		assert( humbleNetState.pendingDataConnections.find(conn) == humbleNetState.pendingDataConnections.end() );
 		humbleNetState.pendingDataConnections.insert(conn);
@@ -7920,7 +7918,6 @@ int humblenet_datagram_send( const void* message, size_t length, int flags, Conn
 
 	datagram_connection& dg = it->second;
 
-	LOG("Sending %zu bytes to %p, [0]=%d\n", length, conn, *(uint8_t*)message );
 	dg.buf_out.emplace_back(reinterpret_cast<const char*>( message ), reinterpret_cast<const char*>( message ) + length);
 
 	// if( !( flags & HUMBLENET_MSG_BUFFERED ) ) {
