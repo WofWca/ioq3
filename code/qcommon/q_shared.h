@@ -1246,6 +1246,8 @@ typedef struct playerState_s {
 
 #define	BUTTON_ANY			2048			// any key whatsoever
 
+#define BUTTON_AUTO_ATTACK	4096 		// automatic shooting for touchscreen controls
+
 #define	MOVE_RUN			120			// if forwardmove or rightmove are >= MOVE_RUN,
 										// then BUTTON_WALKING should be set
 
