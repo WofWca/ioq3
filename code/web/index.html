@@ -324,6 +324,18 @@ let generatedArguments = `
     +set fs_game demoq3
 `;
 
+if (window.matchMedia('(pointer: coarse)').matches) {
+    generatedArguments += `
+        +set cl_autoAttack 1
+        +set g_spskill 1
+    `;
+} else {
+    generatedArguments += `
+        +set cl_autoAttack 0
+        +set g_spskill 2
+    `;
+}
+
 const query = new URLSearchParams(window.location.search);
 let server = query.get('server');
 if (query.has('multiplayer')) {
@@ -469,14 +481,12 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then(async (ioquake3)=>{
                 }
             } else {
                 module.arguments.push(...`
-                    +set g_spskill 2
                     +map q3dm17
                     +addbot sarge
                     +addbot daemia
                     +addbot major
                     +addbot visor
                     +addbot stripe
-                    +addbot grunt
                 `.trim().split(/\s+/));
             }
             module.FS.writeFile('/demoq3/autoexec.cfg', `
