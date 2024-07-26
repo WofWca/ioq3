@@ -212,12 +212,20 @@ var _GamepadEmulator = class {
         const xMax = config.directions["right" /* right */] ? 1 : 0;
         const yMin = config.directions["up" /* up */] ? -1 : 0;
         const yMax = config.directions["down" /* down */] ? 1 : 0;
-        const deltaX = moveEvent.offsetX - touchDetails.startX;
-        const deltaY = moveEvent.offsetY - touchDetails.startY;
+        const deltaX = moveEvent.pageX - touchDetails.startX;
+        const deltaY = moveEvent.pageY - touchDetails.startY;
         let { x, y } = NormalizeClampVector(deltaX, deltaY, config.dragDistance);
         x = Math.max(Math.min(x, xMax), xMin);
         y = Math.max(Math.min(y, yMax), yMin);
-        callback(true, x, y);
+        if (config.invertX)
+          x = -x;
+        if (config.invertY)
+          y = -y;
+        if (config.swapAxes) {
+          callback(true, y, x);
+        } else {
+          callback(true, x, y);
+        }
       }
     };
     const pointerUpHandler = (upEvent) => {
@@ -230,8 +238,8 @@ var _GamepadEmulator = class {
     };
     config.tapTarget.addEventListener("pointerdown", (downEvent) => {
       downEvent.preventDefault();
-      touchDetails.startX = downEvent.offsetX;
-      touchDetails.startY = downEvent.offsetY;
+      touchDetails.startX = downEvent.pageX;
+      touchDetails.startY = downEvent.pageY;
       activePointerId = downEvent.pointerId;
       if (config.lockTargetWhilePressed)
         config.tapTarget.setPointerCapture(downEvent.pointerId);
