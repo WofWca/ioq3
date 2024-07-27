@@ -216,6 +216,17 @@ let fakeMouseDown = false;
 
 look.addEventListener('pointerdown', (e) => {
     lastPointerEvent = e;
+    if (e.offsetY < e.target.clientHeight / 2) {
+        fakeMouseDown = true;
+        const fakeMouseDownEvent = new MouseEvent('mousedown', {
+            clientX: e.offsetX * 8,
+            clientY: e.offsetY * 8,
+            bubbles: true,
+            cancelable: true,
+            view: window
+        });
+        canvas.dispatchEvent(fakeMouseDownEvent);
+    }
 }, { passive: false });
 
 look.addEventListener('pointermove', (e) => {
@@ -326,16 +337,16 @@ let generatedArguments = `
     +set fs_game demoq3
 `;
 
+let botSkill = 2;
+
 if (window.matchMedia('(pointer: coarse)').matches) {
     generatedArguments += `
         +set cl_autoAttack 1
         +set g_forcerespawn 2
-        +set g_spskill 1
     `;
 } else {
     generatedArguments += `
         +set cl_autoAttack 0
-        +set g_spskill 2
     `;
 }
 
@@ -485,11 +496,11 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then(async (ioquake3)=>{
             } else {
                 module.arguments.push(...`
                     +map q3dm17
-                    +addbot sarge
-                    +addbot daemia
-                    +addbot major
-                    +addbot visor
-                    +addbot stripe
+                    +addbot sarge ${botSkill}
+                    +addbot daemia ${botSkill}
+                    +addbot major ${botSkill}
+                    +addbot visor ${botSkill}
+                    +addbot stripe ${botSkill}
                 `.trim().split(/\s+/));
             }
             module.FS.writeFile('/demoq3/autoexec.cfg', `
