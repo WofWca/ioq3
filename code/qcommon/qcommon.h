@@ -250,7 +250,7 @@ PROTOCOL
 ==============================================================
 */
 
-#define	PROTOCOL_VERSION	71
+#define	PROTOCOL_VERSION	730
 #define PROTOCOL_LEGACY_VERSION	68
 // 1.31 - 67
 
@@ -263,7 +263,7 @@ extern int demo_protocols[];
 #endif
 // override on command line, config files etc.
 #ifndef MASTER_SERVER_NAME
-#define MASTER_SERVER_NAME	"master.quake3arena.com"
+#define MASTER_SERVER_NAME	"master.thelongestyard.link"
 #endif
 
 #ifndef STANDALONE
