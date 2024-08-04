@@ -1101,7 +1101,7 @@ ifeq ($(PLATFORM),emscripten)
 
   CLIENT_CFLAGS+=-s USE_SDL=2
 
-  CLIENT_LDFLAGS+=-s TOTAL_MEMORY=256mb
+  CLIENT_LDFLAGS+=-s TOTAL_MEMORY=256mb -sALLOW_MEMORY_GROWTH
   CLIENT_LDFLAGS+=-s STACK_SIZE=5MB
   # Informing Emscripten which WebGL versions we support makes the JS bundle smaller and faster to load.
   CLIENT_LDFLAGS+=-s MIN_WEBGL_VERSION=2
