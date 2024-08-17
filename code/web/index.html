@@ -19,6 +19,8 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
     background: transparent; 
     color: white; 
     display: flex; 
+    user-select: none;
+    -webkit-user-select: none;
 }
 #ui {
     padding: 1em;
@@ -30,6 +32,7 @@ canvas { max-width: 100%; max-height: 100%; min-width: 100%; min-height: 100%; o
     transform-origin: bottom left;
     transform: scale(4) scaleY(0.6);
     user-select: none;
+    -webkit-user-select: none;
 }
 
 .button::before,
@@ -308,6 +311,11 @@ blocker.addEventListener('keydown', fullscreenAndPointerLock);
 blocker.addEventListener('touchend', fullscreenAndPointerLock);
 blocker.addEventListener('mousedown', fullscreenAndPointerLock);
 blocker.addEventListener('touchmove', (e) => e.preventDefault() ); // required for touchend to fire if the touch moves
+
+// Prevent Safari from showing a magnifying glass on double tap and hold. C'mon Apple...
+blocker.addEventListener('touchstart', e=>e.preventDefault(), {passive: false});
+look.addEventListener('touchstart', e=>e.preventDefault(), {passive: false});
+move.addEventListener('touchstart', e=>e.preventDefault(), {passive: false});
 
 
 const defaultKeyBindingKeyCodes = { "KeyW": true, "KeyA": true, "KeyS": true, "KeyD": true, "KeyC": true, "KeyT": true, "Digit1": true, "Digit2": true, "Digit3": true, "Digit4": true, "Digit5": true, "Digit6": true, "Digit7": true, "Digit8": true, "Digit9": true, "Tab": true, "Space": true, "Enter": true, "NumpadEnter": true, "Delete": true, "Slash": true, "Backslash": true, "ArrowUp": true, "ArrowDown": true, "ArrowLeft": true, "ArrowRight": true, "PageDown": true, "End": true, "Escape": true, "ControlLeft": true, "ControlRight": true, "ShiftLeft": true, "ShiftRight": true, "AltLeft": true, "AltRight": true };
