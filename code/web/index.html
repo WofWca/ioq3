@@ -527,6 +527,14 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then(async (ioquake3)=>{
             await Promise.all(pk3Files.map(async ([filePath, file]) => {
                 module.FS.writeFile(filePath, await file);
             }));
+
+            // Free RAM, don't keep duplicate `ArrayBuffer`s.
+            // For some reason `pk3FilesPromise = undefined` is not enough,
+            // according to developer tools,
+            // so let's empty the array. We won't need it anymore.
+            pk3Files.fill(undefined)
+            pk3FilesPromise = undefined;
+
             module.FS.writeFile(`/${basegame}/ztm-flexible-hud.pk3`, await ztmFlexibleHud);
             if (multiplayer) {
                 if (await connectToServer) {
