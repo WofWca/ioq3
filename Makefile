@@ -1090,6 +1090,7 @@ ifeq ($(PLATFORM),emscripten)
   BUILD_GAME_SO=0
   BUILD_GAME_QVM=0
 
+  USE_VOIP=1
   USE_HUMBLENET=1
   BUILD_SERVER=1
 
@@ -1108,7 +1109,7 @@ ifeq ($(PLATFORM),emscripten)
   CLIENT_LDFLAGS+=-s MAX_WEBGL_VERSION=2
   CLIENT_LDFLAGS+=-s FULL_ES2=1
   # The HTML file can use these functions to load extra files before the game starts.
-  CLIENT_LDFLAGS+=-s EXPORTED_RUNTIME_METHODS=FS,addRunDependency,removeRunDependency,cwrap,stackAlloc,out,AL,Browser
+  CLIENT_LDFLAGS+=-s EXPORTED_RUNTIME_METHODS=FS,addRunDependency,removeRunDependency,cwrap,stackAlloc,out,AL,Browser,HEAPU8,getUserMedia
   CLIENT_LDFLAGS+= -lidbfs.js
   CLIENT_LDFLAGS+=-s EXIT_RUNTIME=1
   CLIENT_LDFLAGS+=-s EXPORT_ES6
@@ -1116,7 +1117,7 @@ ifeq ($(PLATFORM),emscripten)
 
   SERVER_LDFLAGS+=-s TOTAL_MEMORY=256mb
   SERVER_LDFLAGS+=-s STACK_SIZE=5MB
-  SERVER_LDFLAGS+=-s EXPORTED_RUNTIME_METHODS=FS,addRunDependency,removeRunDependency,cwrap,stackAlloc,out,AL,Browser
+  SERVER_LDFLAGS+=-s EXPORTED_RUNTIME_METHODS=FS,addRunDependency,removeRunDependency,cwrap,stackAlloc,out,AL,Browser,HEAPU8
   # SERVER_LDFLAGS+=-s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE='["$$stackAlloc"]'
   SERVER_LDFLAGS+=-s EXIT_RUNTIME=1
   SERVER_LDFLAGS+=-s EXPORT_ES6
