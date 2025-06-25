@@ -1526,6 +1526,13 @@ CG_WeaponSelectable
 ===============
 */
 static qboolean CG_WeaponSelectable( int i ) {
+	Com_Printf(
+		"CG_WeaponSelectable cg.snap->ps.ammo[%d] = %d, cg.predictedPlayerState.ammo[%d] = %d\n",
+		i,
+		cg.snap->ps.ammo[i],
+		i,
+		cg.predictedPlayerState.ammo[i]
+	);
 	if ( !cg.snap->ps.ammo[i] ) {
 		return qfalse;
 	}
@@ -1652,6 +1659,7 @@ void CG_OutOfAmmoChange( void ) {
 
 	for ( i = MAX_WEAPONS-1 ; i > 0 ; i-- ) {
 		if ( CG_WeaponSelectable( i ) ) {
+			Com_Printf("cg.weaponSelect = %d\n", i);
 			cg.weaponSelect = i;
 			break;
 		}

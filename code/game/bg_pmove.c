@@ -1628,7 +1628,9 @@ static void PM_Weapon( void ) {
 	pm->ps->weaponstate = WEAPON_FIRING;
 
 	// check for out of ammo
+	Com_Printf("check for out of ammo %d\n", pm->ps->ammo[ pm->ps->weapon ]);
 	if ( ! pm->ps->ammo[ pm->ps->weapon ] ) {
+		Com_Printf("PM_AddEvent( EV_NOAMMO ) %d\n", pm->ps->weapon);
 		PM_AddEvent( EV_NOAMMO );
 		pm->ps->weaponTime += 500;
 		return;
