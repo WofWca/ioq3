@@ -601,7 +601,16 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 	self->s.loopSound = 0;
 
-	self->r.maxs[2] = -8;
+	if ( g_debugDamage.integer ) {
+		G_Printf(
+			"player_die, self->r.maxs[2] = %f, self->r.mins[2] = %f\n",
+			self->r.maxs[2],
+			self->r.mins[2]
+		);
+	}
+	// So is this the code that "shortens" the corpse?
+	// Can we only add this on next frame?
+	// self->r.maxs[2] = -8;
 
 	// don't allow respawn until the death anim is done
 	// g_forcerespawn may force spawning at some later time

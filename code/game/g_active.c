@@ -79,6 +79,8 @@ void P_DamageFeedback( gentity_t *player ) {
 
 	client->ps.damageCount = count;
 
+	// Hmmm, so these are the things that are "per-frame".
+	// Maybe we can move the "dead" corpse lowering here as well?
 	//
 	// clear totals
 	//
