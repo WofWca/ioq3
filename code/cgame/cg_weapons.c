@@ -2112,9 +2112,9 @@ void CG_Tracer( vec3_t source, vec3_t dest ) {
 		Com_Printf("len < 100 <\n");
 		return;
 	}
-	// begin = 50 + random() * (len - 60);
+	begin = 50 + random() * (len - 60);
 	// begin = 50 + 0.05 * (len - 60);
-	begin = 1;
+	// begin = 1;
 	end = begin + cg_tracerLength.value;
 	if ( end > len ) {
 		end = len;
@@ -2188,7 +2188,7 @@ static qboolean	CG_CalcMuzzlePoint( int entityNum, vec3_t muzzle ) {
 		muzzle[2] += cg.snap->ps.viewheight;
 		AngleVectors( cg.snap->ps.viewangles, forward, right, up );
 		VectorMA( muzzle, 14, forward, muzzle );
-		VectorMA( muzzle, 4, right, muzzle );
+		VectorMA( muzzle, 3, right, muzzle );
 		VectorMA( muzzle, -8, up, muzzle );
 		return qtrue;
 	}
