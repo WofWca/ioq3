@@ -2179,15 +2179,17 @@ CG_CalcMuzzlePoint
 ======================
 */
 static qboolean	CG_CalcMuzzlePoint( int entityNum, vec3_t muzzle ) {
-	vec3_t		forward;
+	vec3_t		forward, right, up;
 	centity_t	*cent;
 	int			anim;
 
 	if ( entityNum == cg.snap->ps.clientNum ) {
 		VectorCopy( cg.snap->ps.origin, muzzle );
 		muzzle[2] += cg.snap->ps.viewheight;
-		AngleVectors( cg.snap->ps.viewangles, forward, NULL, NULL );
+		AngleVectors( cg.snap->ps.viewangles, forward, right, up );
 		VectorMA( muzzle, 14, forward, muzzle );
+		VectorMA( muzzle, 4, right, muzzle );
+		VectorMA( muzzle, -8, up, muzzle );
 		return qtrue;
 	}
 
