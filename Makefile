@@ -1088,7 +1088,8 @@ ifeq ($(PLATFORM),emscripten)
   USE_CURL=0
   HAVE_VM_COMPILED=false
   BUILD_GAME_SO=0
-  BUILD_GAME_QVM=0
+#   BUILD_GAME_QVM=0
+  BUILD_GAME_QVM=1
 
   USE_HUMBLENET=1
   BUILD_SERVER=1
@@ -1202,7 +1203,8 @@ ifneq ($(BUILD_SERVER),0)
 
   ifeq ($(PLATFORM),emscripten)
     EMSCRIPTENOBJ+=$(B)/$(SERVERBIN).wasm32.wasm
-    EMSCRIPTENOBJ+=$(B)/ztm-flexible-hud.pk3
+    # EMSCRIPTENOBJ+=$(B)/ztm-flexible-hud.pk3
+
     # ifeq ($(EMSCRIPTEN_PRELOAD_FILE),1)
     #   EMSCRIPTENOBJ+=$(B)/$(SERVERBIN).wasm32.data
     # endif
@@ -1655,11 +1657,11 @@ ifneq ($(TARGETS),)
   endif
 endif
 
-$(B)/ztm-flexible-hud.pk3: $(B)/$(BASEGAME)/vm/cgame.qvm $(B)/$(BASEGAME)/vm/qagame.qvm $(B)/$(BASEGAME)/vm/ui.qvm code/game/inv.h
-	@rm -f $@
-	@mkdir -p $(B)/$(BASEGAME)/botfiles
-	@cp code/game/inv.h $(B)/$(BASEGAME)/botfiles/inv.h
-	@cd $(B)/$(BASEGAME) && zip -r9 ../ztm-flexible-hud.pk3 vm/* botfiles/*
+# $(B)/ztm-flexible-hud.pk3: $(B)/$(BASEGAME)/vm/cgame.qvm $(B)/$(BASEGAME)/vm/qagame.qvm $(B)/$(BASEGAME)/vm/ui.qvm code/game/inv.h
+# 	@rm -f $@
+# 	@mkdir -p $(B)/$(BASEGAME)/botfiles
+# 	@cp code/game/inv.h $(B)/$(BASEGAME)/botfiles/inv.h
+# 	@cd $(B)/$(BASEGAME) && zip -r9 ../ztm-flexible-hud.pk3 vm/* botfiles/*
 
 $(B).zip: $(TARGETS)
 ifeq ($(PLATFORM),darwin)
@@ -2487,9 +2489,9 @@ $(B)/$(CLIENTBIN)_opengl2$(FULLBINEXT): $(Q3OBJ) $(Q3R2OBJ) $(Q3R2STRINGOBJ) $(J
 		$(LIBSDLMAIN) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)
 endif
 
-ifeq ($(BUILD_GAME_QVM),1)
-  TARGETS += $(B)/ztm-flexible-hud.pk3
-endif
+# ifeq ($(BUILD_GAME_QVM),1)
+#   TARGETS += $(B)/ztm-flexible-hud.pk3
+# endif
 
 ifneq ($(strip $(LIBSDLMAIN)),)
 ifneq ($(strip $(LIBSDLMAINSRC)),)
