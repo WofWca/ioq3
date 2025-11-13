@@ -353,13 +353,10 @@ let generatedArguments = `
 
 if (window.matchMedia('(pointer: coarse)').matches) {
     generatedArguments += `
-        +set cl_autoAttack 1
-        +set g_forcerespawn 2
         +set g_spskill 1
     `;
 } else {
     generatedArguments += `
-        +set cl_autoAttack 0
         +set g_spskill 2
     `;
 }
@@ -509,12 +506,14 @@ import(`${buildPath}/ioquake3_opengl2.wasm32.js`).then(async (ioquake3)=>{
                 }
             } else {
                 module.arguments.push(...`
+                    +set g_spskill 2
                     +map q3dm17
                     +addbot sarge
                     +addbot daemia
                     +addbot major
                     +addbot visor
                     +addbot stripe
+                    +addbot grunt
                 `.trim().split(/\s+/));
             }
             module.FS.writeFile('/demoq3/autoexec.cfg', `
