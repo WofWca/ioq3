@@ -1088,7 +1088,7 @@ ifeq ($(PLATFORM),emscripten)
   USE_CURL=0
   HAVE_VM_COMPILED=false
   BUILD_GAME_SO=0
-  BUILD_GAME_QVM=0
+  BUILD_GAME_QVM=1
 
   USE_HUMBLENET=1
   BUILD_SERVER=1
@@ -2487,9 +2487,9 @@ $(B)/$(CLIENTBIN)_opengl2$(FULLBINEXT): $(Q3OBJ) $(Q3R2OBJ) $(Q3R2STRINGOBJ) $(J
 		$(LIBSDLMAIN) $(CLIENT_LIBS) $(RENDERER_LIBS) $(LIBS)
 endif
 
-ifeq ($(BUILD_GAME_QVM),1)
-  TARGETS += $(B)/ztm-flexible-hud.pk3
-endif
+# ifeq ($(BUILD_GAME_QVM),1)
+#   TARGETS += $(B)/ztm-flexible-hud.pk3
+# endif
 
 ifneq ($(strip $(LIBSDLMAIN)),)
 ifneq ($(strip $(LIBSDLMAINSRC)),)
