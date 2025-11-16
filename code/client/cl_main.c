@@ -3619,7 +3619,9 @@ void CL_Init( void ) {
 	// ~ and `, as keys and characters
 	cl_consoleKeys = Cvar_Get( "cl_consoleKeys", "~ ` 0x7e 0x60", CVAR_ARCHIVE);
 
-	cl_autoAttack = Cvar_Get( "cl_autoAttack", "0", CVAR_INIT);
+	// TODO: actually detect touchscreen controls and enable this only if they are being used currently, instead of with a cvar
+	// TODO: reconsider whether this needs to be in `CL_Init`.
+	cl_autoAttack = Cvar_Get( "cl_autoAttack", "0", CVAR_USERINFO | CVAR_INIT);
 
 	// userinfo
 	Cvar_Get ("name", "UnnamedPlayer", CVAR_USERINFO | CVAR_ARCHIVE );

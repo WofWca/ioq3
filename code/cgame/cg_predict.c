@@ -382,6 +382,7 @@ static void CG_TouchTriggerPrediction( void ) {
 }
 
 
+extern cvar_t *cl_autoAttack;
 
 /*
 =================
@@ -496,6 +497,7 @@ void CG_PredictPlayerState( void ) {
 		trap_Cvar_Update(&pmove_msec);
 	}
 
+	cg_pmove.autoAttack = cl_autoAttack->integer;
 	cg_pmove.pmove_fixed = pmove_fixed.integer;// | cg_pmove_fixed.integer;
 	cg_pmove.pmove_msec = pmove_msec.integer;
 
