@@ -197,7 +197,9 @@ USE_CODEC_VORBIS=0
 endif
 
 ifndef USE_CODEC_OPUS
-USE_CODEC_OPUS=0
+# Enabled so that we can bundle game content with audio that is compressed
+# So it's not tens of megabytes is size.
+USE_CODEC_OPUS=1
 endif
 
 ifndef USE_MUMBLE
