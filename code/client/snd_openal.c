@@ -2664,6 +2664,10 @@ qboolean S_AL_Init( soundInterface_t *si )
 		// !!! FIXME:  then the extension string, but that's too much trouble,
 		// !!! FIXME:  so we'll just check the function pointer for now.
 		if (qalcCaptureOpenDevice == NULL)
+#elif defined(__EMSCRIPTEN__)
+		// Emscripten implements the capture functions,
+		// but doesn't list ALC_EXT_capture in its extensions.
+		if (0)
 #else
 		if (!qalcIsExtensionPresent(NULL, "ALC_EXT_capture"))
 #endif
