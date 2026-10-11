@@ -301,6 +301,7 @@ extern	int serverBansCount;
 
 #ifdef USE_VOIP
 extern	cvar_t	*sv_voip;
+extern	cvar_t	*sv_voipEcho;
 extern	cvar_t	*sv_voipProtocol;
 #endif
 

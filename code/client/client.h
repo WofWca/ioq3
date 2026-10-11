@@ -439,6 +439,7 @@ extern	cvar_t	*cl_voipSendTarget;
 extern	cvar_t	*cl_voipGainDuringCapture;
 extern	cvar_t	*cl_voipCaptureMult;
 extern	cvar_t	*cl_voipShowMeter;
+extern	cvar_t	*cl_voipEcho;
 extern	cvar_t	*cl_voip;
 
 // 20ms at 48k

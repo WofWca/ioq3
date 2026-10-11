@@ -1850,7 +1850,7 @@ void SV_UserVoip(client_t *cl, msg_t *msg, qboolean ignoreData)
 	for (i = 0, client = svs.clients; i < sv_maxclients->integer ; i++, client++) {
 		if (client->state != CS_ACTIVE)
 			continue;  // not in the game yet, don't send to this guy.
-		else if (i == sender)
+		else if (i == sender && !sv_voipEcho->integer)
 			continue;  // don't send voice packet back to original author.
 		else if (!client->hasVoip)
 			continue;  // no VoIP support, or unsupported protocol

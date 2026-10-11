@@ -657,7 +657,7 @@ qboolean CL_ShouldIgnoreVoipSender(int sender)
 {
 	if (!cl_voip->integer)
 		return qtrue;  // VoIP is disabled.
-	else if ((sender == clc.clientNum) && (!clc.demoplaying))
+	else if ((sender == clc.clientNum) && (!clc.demoplaying) && (!cl_voipEcho->integer))
 		return qtrue;  // ignore own voice (unless playing back a demo).
 	else if (clc.voipMuteAll)
 		return qtrue;  // all channels are muted with extreme prejudice.

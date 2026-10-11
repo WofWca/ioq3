@@ -97,6 +97,14 @@ cl_voipShowMeter: Set to "1" (the default) to show a volume meter as you are
                   game can "hear" you. Set to "0" to disable the display of
                   the meter.
 
+cl_voipEcho: Set to "1" to play back your own voice if the server sends it to
+             you, which it only does with sv_voipEcho set. Defaults to "0".
+             Together they let you test VoIP on your own, e.g. on a local
+             server.
+
+sv_voipEcho: Set to "1" to have the server send voice packets back to the
+             client that sent them. Defaults to "0". For testing.
+
 cl_voipCaptureMult: Multiply recorded audio by this value after denoising.
                     Defaults to 2.0 to _double_ the volume of your voice.
                     This is to make you more audible if denoising eats away
