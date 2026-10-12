@@ -207,7 +207,7 @@ USE_MUMBLE=0
 endif
 
 ifndef USE_VOIP
-USE_VOIP=0
+USE_VOIP=1
 endif
 
 ifndef USE_FREETYPE
