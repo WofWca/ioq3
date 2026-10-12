@@ -1113,6 +1113,10 @@ ifeq ($(PLATFORM),emscripten)
   # The HTML file can use these functions to load extra files before the game starts.
   CLIENT_LDFLAGS+=-s EXPORTED_RUNTIME_METHODS=FS,addRunDependency,removeRunDependency,cwrap,stackAlloc,out,AL,Browser,HEAPU8
   CLIENT_LDFLAGS+=--post-js code/web/export-main-loop.js
+  # The options that the HTML file passes to the module.
+  # `postMainLoop` is not accepted by default since Emscripten 6.0.2.
+  # `noInitialRun` is used in https://github.com/WofWca/quake3.xdc.
+  CLIENT_LDFLAGS+=-s INCOMING_MODULE_JS_API=canvas,arguments,locateFile,postMainLoop,printErr,preRun,noInitialRun
   CLIENT_LDFLAGS+= -lidbfs.js
   CLIENT_LDFLAGS+=-s EXIT_RUNTIME=1
   CLIENT_LDFLAGS+=-s EXPORT_ES6
@@ -1125,6 +1129,11 @@ ifeq ($(PLATFORM),emscripten)
   SERVER_LDFLAGS+=-s EXIT_RUNTIME=1
   SERVER_LDFLAGS+=-s EXPORT_ES6
   SERVER_LDFLAGS+=-s EXPORT_NAME=ioq3ded
+
+  # HumbleNet is C++, and since Emscripten 6.0.6 emcc doesn't link
+  # the C++ standard library by default.
+  CLIENT_LDFLAGS+=-s DEFAULT_TO_CXX
+  SERVER_LDFLAGS+=-s DEFAULT_TO_CXX
 
 
   # Game data files can be packaged by emcc into a .data file that lives next to the wasm bundle
