@@ -1109,7 +1109,6 @@ ifeq ($(PLATFORM),emscripten)
   # Informing Emscripten which WebGL versions we support makes the JS bundle smaller and faster to load.
   CLIENT_LDFLAGS+=-s MIN_WEBGL_VERSION=2
   CLIENT_LDFLAGS+=-s MAX_WEBGL_VERSION=2
-  CLIENT_LDFLAGS+=-s FULL_ES2=1
   # The HTML file can use these functions to load extra files before the game starts.
   CLIENT_LDFLAGS+=-s EXPORTED_RUNTIME_METHODS=FS,addRunDependency,removeRunDependency,cwrap,stackAlloc,out,AL,Browser,HEAPU8
   CLIENT_LDFLAGS+=--post-js code/web/export-main-loop.js
