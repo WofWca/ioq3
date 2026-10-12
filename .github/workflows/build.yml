@@ -150,7 +150,7 @@ jobs:
     - name: Install emsdk
       uses: mymindstorm/setup-emsdk@v13
       with:
-        version: 4.0.11
+        version: 6.0.12
     - name: Install Dependencies
       run: |
         curl -LO https://github.com/libsdl-org/SDL/releases/download/release-${{ needs.versions.outputs.sdl }}/SDL3-${{ needs.versions.outputs.sdl }}.tar.gz
